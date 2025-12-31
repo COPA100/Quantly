@@ -1,0 +1,13 @@
+"Positions for account Individual ...902 as of 03:18 PM ET, 2025/12/31"
+
+"Symbol","Description","Qty (Quantity)","Price","Price Chng $ (Price Change $)","Price Chng % (Price Change %)","Mkt Val (Market Value)","Day Chng $ (Day Change $)","Day Chng % (Day Change %)","Cost Basis","Gain $ (Gain/Loss $)","Gain % (Gain/Loss %)","Reinvest?","Reinvest Capital Gains?","Security Type",
+"AAPL","APPLE INC","0.034","$198.42","+$1.12","+0.57%","$6.74","+$0.04","+0.6%","$6.10","$0.64","10.49%","Yes","N/A","Equity",
+"TSLA","TESLA INC","0.018","$271.85","-$3.20","-1.16%","$4.89","-$0.06","-1.21%","$5.30","-$0.41","-7.74%","Yes","N/A","Equity",
+"AMD","ADVANCED MICRO DEVICES INC","0.041","$156.77","+$2.01","+1.3%","$6.43","+$0.08","+1.26%","$5.90","$0.53","8.98%","Yes","N/A","Equity",
+"DIS","THE WALT DISNEY CO","0.052","$99.34","-$0.48","-0.48%","$5.17","-$0.03","-0.52%","$5.45","-$0.28","-5.14%","Yes","N/A","Equity",
+"BAC","BANK OF AMERICA CORP","0.142","$34.91","+$0.21","+0.61%","$4.96","+$0.03","+0.61%","$4.60","$0.36","7.83%","Yes","N/A","Equity",
+"SHOP","SHOPIFY INC CLASS A","0.027","$78.66","-$1.05","-1.32%","$2.12","-$0.03","-1.4%","$2.35","-$0.23","-9.79%","Yes","N/A","Equity",
+"QQQ","INVESCO QQQ TRUST","0.012","$409.88","-$2.91","-0.71%","$4.92","-$0.04","-0.71%","$4.75","$0.17","3.58%","No","N/A","ETFs & Closed End Funds",
+"VOO","VANGUARD S&P 500 ETF","0.01","$627.24","-$4.48","-0.71%","$6.27","-$0.04","-0.71%","$6.10","$0.17","2.79%","No","N/A","ETFs & Closed End Funds",
+"Cash & Cash Investments","--","--","--","--","--","$8.35","$0.00","0%","--","--","--","--","--","Cash and Money Market",
+"Account Total","","--","--","--","--","$50.85","-$0.05","-0.1%","$47.55","$3.30","6.94%","--","--","--",
