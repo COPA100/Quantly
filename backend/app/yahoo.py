@@ -2,18 +2,26 @@
 # https://ranaroussi.github.io/yfinance/reference/index.html
 
 import yfinance as yf
-from csv_reader import cleanPortfolio
+from csv_reader import parse_portfolio, get_symbols
 
-portfolio = cleanPortfolio("example_csv/ex1.csv")
-investment_names = portfolio["names"]
-investment_qty = portfolio["qty"]
+# get the cleaned portfolio and add more important data from yfinance to each stock object in the list
+# eventually this needs to be cached to db for historical data (i do this later)
+def fetch_current_prices(file_path):
 
-data = yf.download(investment_names, period="1d", interval="1d")
-dataPrices = data["Close"].iloc[-1].to_dict()
-print(dataPrices)
+    portfolio = parse_portfolio(file_path)
 
-total = 0
-for sym, qty in zip(investment_names, investment_qty):
-    total += dataPrices[sym] * qty
-    print(sym, qty, dataPrices[sym])
-print(total)
+    symbols = get_symbols(file_path)
+    data = yf.download(symbols, period="1d", interval="1d")
+
+    prices = data["Close"].iloc[-1].to_dict()
+    
+    for position in portfolio:
+        symbol = position["symbol"]
+        if symbol in prices:
+            position["current_price"] = round(prices[symbol], 2)
+        else:
+            position["current_price"] = None
+
+    print(portfolio)
+
+fetch_current_prices("example_csv/ex1.csv")
