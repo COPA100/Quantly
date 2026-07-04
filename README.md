@@ -1,12 +1,22 @@
 # Quantly
 
-## Goal
-Quantly is a hybrid Python/C++ portfolio analytics platform that evaluates a user’s stock portfolio across historical performance and risk metrics. Users authenticate via JWT-secured APIs and upload portfolio CSVs through a FastAPI backend. The backend then validates user identity, stores portfolio files in AWS S3, and stores portfolio information and computed results in AWS RDS.
+Portfolio analytics platform — upload your holdings and get real risk & performance insights, not just "what's it worth."
 
-Historical market data is fetched from the Yahoo Finance API and processed through a high-performance analytics engine. Computationally intensive calculations are implemented in C++ and exposed to Python via pybind, allowing the system to scale efficiently as data size and user count grow. Results are then returned to the frontend for interactive visualization.
+## Overview
 
-## Motivation
-Quantly is both a personal and technical project for me. The scale and richness of financial data allow for advanced analytics, algorithmic modeling, and meaningful performance insights that I can apply to my own portfolio. Building a tool that helps with real investing decisions makes the project personally motivating and technically challenging. Developing Quantly will help me learn AWS cloud services, Docker, and JWT, while solidifying my knowledge of everything else.
+Quantly turns a CSV of your stock holdings into the analytics your brokerage screen doesn't give you: how risky your portfolio actually is, whether you're being paid for that risk, and whether you're genuinely diversified. You upload a portfolio, the backend fetches historical market data and runs performance/risk calculations, and the results are returned for interactive visualization.
+
+It's a hybrid **Python/C++** system: latency-sensitive API work in FastAPI, with the heavy number-crunching in a C++ engine exposed to Python via pybind11.
+
+## What it does
+
+Beyond current value and gain/loss, Quantly surfaces risk & diversification insights — each paired with a plain-English interpretation, not just a number:
+
+- **Volatility & max drawdown** — how much your portfolio could realistically fall.
+- **Sharpe / Sortino ratio** — whether your returns justify the risk you're taking.
+- **Correlation matrix** — whether your holdings actually diversify you, or all move together.
+- **Beta** — how your portfolio moves relative to the market.
+- **Allocation & concentration** — how exposed you are to any single position.
 
 ## Tech Stack
 
@@ -20,12 +30,56 @@ Quantly is both a personal and technical project for me. The scale and richness 
 ### Backend
 - FastAPI
 - Python (pandas, NumPy)
-- C++ (via pybind)
+- C++ (via pybind11)
 - JWT authentication (PyJWT)
-- SQL
+- SQL (PostgreSQL)
 
 ### Data & Infrastructure
 - AWS S3 (portfolio file storage)
 - AWS RDS (user, portfolio, and analytics metadata)
-- AWS ECS Fargate (host FastAPI and C++ engine)
-- Docker
+- AWS ECS Fargate (FastAPI API + async worker)
+- Celery + Redis (async job processing)
+- Docker, Terraform
+
+## Architecture (target)
+
+```
+React frontend  ──HTTPS/JWT──▶  FastAPI API  ──enqueue──▶  Redis  ──▶  Celery worker
+                                    │                                      │
+                              RDS (Postgres)                     Yahoo data + C++ engine
+                                    │                                      │
+                                   S3 (raw CSVs)  ◀───────────────  results → RDS
+```
+
+The API stays fast and stateless; heavy analysis runs asynchronously in a separate worker so uploads never block on compute. Market data is fetched lazily per ticker and cached/stored once, shared across all portfolios.
+
+## Getting Started
+
+### Prerequisites
+- Python 3.13+
+
+### Run the backend
+```bash
+cd backend/app
+python -m venv .venv
+
+# Windows (PowerShell):   .venv\Scripts\Activate.ps1
+# Windows (Git Bash):     source .venv/Scripts/activate
+# macOS / Linux:          source .venv/bin/activate
+
+pip install -r requirements.txt
+uvicorn main:app --reload
+```
+
+The API runs at `http://127.0.0.1:8000` with interactive docs at `/docs`.
+
+### Try it
+Upload one of the sample files in [`example_csv/`](./example_csv) to `POST /upload`, then hit `GET /portfolio` and `GET /summary` to see parsed positions, current values, and gain/loss.
+
+## Status
+
+Early, active development. The valuation pipeline (CSV upload → live prices → gain/loss) works today; auth, the C++ analytics engine, async processing, and cloud infrastructure are in progress.
+
+## Motivation
+
+Quantly is both a personal and technical project. The scale and richness of financial data allow for advanced analytics and meaningful performance insights that apply directly to my own portfolio — building a tool that helps with real investing decisions makes it personally motivating and technically challenging. It's also a vehicle for going deep on production system design: async processing, infrastructure-as-code, benchmarked C++ performance work, and secure modern auth.
