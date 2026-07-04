@@ -1,4 +1,9 @@
 -r api.txt
 -r worker.txt
 
-# Test + lint tooling (pytest, ruff, black, isort) added in later phases.
+# Lint + format tooling (configured in backend/pyproject.toml)
+ruff==0.9.6
+black==25.1.0
+isort==5.13.2
+
+# Test tooling (pytest) added with the first tests.
