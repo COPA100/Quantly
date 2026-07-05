@@ -1,0 +1,32 @@
+name: lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install lint tooling
+        run: pip install ruff==0.9.6 isort==5.13.2 black==25.1.0
+
+      - name: ruff
+        working-directory: backend
+        run: ruff check app
+
+      - name: isort
+        working-directory: backend
+        run: isort --check-only app
+
+      - name: black
+        working-directory: backend
+        run: black --check app
