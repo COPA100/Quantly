@@ -1,5 +1,6 @@
 import pandas as pd
 
+
 # clean CSV file to the symbol and quantity
 def parse_portfolio(file_path):
 

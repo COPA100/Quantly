@@ -2,7 +2,7 @@
 # https://ranaroussi.github.io/yfinance/reference/index.html
 
 import yfinance as yf
-from csv_reader import parse_portfolio
+
 
 # add current prices from yfinance to each stock in the portfolio
 def fetch_current_prices(portfolio):
@@ -11,7 +11,7 @@ def fetch_current_prices(portfolio):
     data = yf.download(symbols, period="1d", interval="1d")
 
     prices = data["Close"].iloc[-1].to_dict()
-    
+
     for position in portfolio:
         symbol = position["symbol"]
         if symbol in prices:
