@@ -6,4 +6,5 @@ ruff==0.9.6
 black==25.1.0
 isort==5.13.2
 
-# Test tooling (pytest) added with the first tests.
+# Test tooling
+pytest==8.3.4

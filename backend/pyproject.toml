@@ -16,3 +16,7 @@ target-version = ["py313"]
 profile = "black"
 line_length = 100
 known_first_party = ["app"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["app"]
