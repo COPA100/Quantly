@@ -10,16 +10,19 @@ from common.analytics.basic import (
     calculate_portfolio_total,
     calculate_position_gains,
 )
+from common.config import get_settings
 from common.csv_reader import parse_portfolio
 from common.market_data import fetch_current_prices
 
-app = FastAPI()
+settings = get_settings()
+
+app = FastAPI(title=settings.app_name)
 
 app.include_router(health.router)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.cors_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
