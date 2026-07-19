@@ -1,4 +1,4 @@
-import calculations
+from common.analytics import basic
 
 
 def test_analytics_helpers_are_importable():
@@ -10,4 +10,4 @@ def test_analytics_helpers_are_importable():
         "calculate_position_gains",
         "calculate_position_allocation",
     ):
-        assert callable(getattr(calculations, name))
+        assert callable(getattr(basic, name))
