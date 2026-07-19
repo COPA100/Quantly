@@ -3,6 +3,9 @@
 # will migrate from here into worker.txt so the API image stays lean.
 pydantic==2.12.5
 pydantic-settings==2.14.2
+sqlalchemy==2.0.51
+alembic==1.18.5
+psycopg[binary]==3.3.4
 pandas==2.3.3
 numpy==2.3.4
 yfinance==0.2.66
