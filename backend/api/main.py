@@ -12,8 +12,8 @@ from app.calculations import (
     calculate_portfolio_total,
     calculate_position_gains,
 )
-from app.csv_reader import parse_portfolio
 from app.market_data import fetch_current_prices
+from common.csv_reader import parse_portfolio
 
 app = FastAPI()
 
