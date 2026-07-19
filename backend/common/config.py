@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     app_name: str = "Quantly"
     environment: str = "dev"
     cors_origins: list[str] = ["http://localhost:5173"]
+    # default matches the docker-compose postgres service
+    database_url: str = "postgresql+psycopg://quantly:quantly@localhost:5432/quantly"
 
 
 @lru_cache
