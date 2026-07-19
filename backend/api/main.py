@@ -4,6 +4,8 @@ import tempfile
 from fastapi import FastAPI, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
+from api.routers import health
+
 # transitional imports: these modules move to common/ in the next slices
 from app.calculations import (
     calculate_portfolio_gainloss,
@@ -14,6 +16,8 @@ from app.csv_reader import parse_portfolio
 from app.market_data import fetch_current_prices
 
 app = FastAPI()
+
+app.include_router(health.router)
 
 app.add_middleware(
     CORSMiddleware,
