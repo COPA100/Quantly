@@ -7,6 +7,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from common.db import Base
 
 if TYPE_CHECKING:
+    from common.models.portfolio import Portfolio
     from common.models.refresh_token import RefreshToken
 
 
@@ -22,3 +23,4 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     refresh_tokens: Mapped[list["RefreshToken"]] = relationship(back_populates="user")
+    portfolios: Mapped[list["Portfolio"]] = relationship(back_populates="user")
