@@ -7,6 +7,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from common.db import Base
 
 if TYPE_CHECKING:
+    from common.models.analytics_result import AnalyticsResult
     from common.models.holding import Holding
     from common.models.user import User
 
@@ -28,5 +29,8 @@ class Portfolio(Base):
 
     user: Mapped["User"] = relationship(back_populates="portfolios")
     holdings: Mapped[list["Holding"]] = relationship(
+        back_populates="portfolio", cascade="all, delete-orphan"
+    )
+    analytics_results: Mapped[list["AnalyticsResult"]] = relationship(
         back_populates="portfolio", cascade="all, delete-orphan"
     )
