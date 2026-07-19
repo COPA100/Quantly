@@ -9,6 +9,7 @@ from common.db import Base
 if TYPE_CHECKING:
     from common.models.analytics_result import AnalyticsResult
     from common.models.holding import Holding
+    from common.models.job import Job
     from common.models.user import User
 
 
@@ -34,3 +35,4 @@ class Portfolio(Base):
     analytics_results: Mapped[list["AnalyticsResult"]] = relationship(
         back_populates="portfolio", cascade="all, delete-orphan"
     )
+    jobs: Mapped[list["Job"]] = relationship(back_populates="portfolio")
