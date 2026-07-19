@@ -3,5 +3,9 @@ __pycache__/
 .venv/
 venv/
 .env
+.pytest_cache/
+.ruff_cache/
+tests/
+pyproject.toml
 Dockerfile
 .dockerignore

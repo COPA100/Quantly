@@ -60,7 +60,7 @@ The API stays fast and stateless; heavy analysis runs asynchronously in a separa
 
 ### Run the backend
 ```bash
-cd backend/app
+cd backend
 python -m venv .venv
 
 # Windows (PowerShell):   .venv\Scripts\Activate.ps1
@@ -68,7 +68,7 @@ python -m venv .venv
 # macOS / Linux:          source .venv/bin/activate
 
 pip install -r requirements.txt
-uvicorn main:app --reload
+uvicorn api.main:app --reload
 ```
 
 The API runs at `http://127.0.0.1:8000` with interactive docs at `/docs`.

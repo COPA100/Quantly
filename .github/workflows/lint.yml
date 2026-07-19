@@ -21,12 +21,12 @@ jobs:
 
       - name: ruff
         working-directory: backend
-        run: ruff check app
+        run: ruff check .
 
       - name: isort
         working-directory: backend
-        run: isort --check-only app
+        run: isort --check-only .
 
       - name: black
         working-directory: backend
-        run: black --check app
+        run: black --check .

@@ -1,15 +1,17 @@
 import os
 import tempfile
 
-from calculations import (
+from fastapi import FastAPI, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
+
+# transitional imports: these modules move to common/ in the next slices
+from app.calculations import (
     calculate_portfolio_gainloss,
     calculate_portfolio_total,
     calculate_position_gains,
 )
-from csv_reader import parse_portfolio
-from fastapi import FastAPI, UploadFile
-from fastapi.middleware.cors import CORSMiddleware
-from market_data import fetch_current_prices
+from app.csv_reader import parse_portfolio
+from app.market_data import fetch_current_prices
 
 app = FastAPI()
 
