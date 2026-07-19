@@ -5,15 +5,13 @@ from fastapi import FastAPI, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.routers import health
-
-# transitional import: market_data moves to common/ in the next slice
-from app.market_data import fetch_current_prices
 from common.analytics.basic import (
     calculate_portfolio_gainloss,
     calculate_portfolio_total,
     calculate_position_gains,
 )
 from common.csv_reader import parse_portfolio
+from common.market_data import fetch_current_prices
 
 app = FastAPI()
 

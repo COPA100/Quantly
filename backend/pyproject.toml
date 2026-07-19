@@ -15,8 +15,8 @@ target-version = ["py313"]
 [tool.isort]
 profile = "black"
 line_length = 100
-known_first_party = ["api", "app", "common"]
+known_first_party = ["api", "common"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = [".", "app"]
+pythonpath = ["."]
