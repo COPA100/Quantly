@@ -3,6 +3,7 @@ from decimal import Decimal
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, UploadFile
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from api.deps import get_current_user
@@ -52,3 +53,13 @@ async def create_portfolio(
     db.commit()
     db.refresh(portfolio)
     return portfolio
+
+
+@router.get("", response_model=list[PortfolioRead])
+def list_portfolios(
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[User, Depends(get_current_user)],
+):
+    return db.scalars(
+        select(Portfolio).where(Portfolio.user_id == user.id).order_by(Portfolio.created_at.desc())
+    ).all()
