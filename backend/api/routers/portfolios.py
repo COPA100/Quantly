@@ -8,12 +8,14 @@ from sqlalchemy.orm import Session
 
 from api.deps import get_current_user
 from api.schemas.portfolio import PortfolioDetail, PortfolioRead
-from common.csv_reader import parse_portfolio
+from common.config import get_settings
+from common.csv_reader import CSVValidationError, parse_portfolio
 from common.db import get_db
 from common.models import Holding, Portfolio, PortfolioStatus, User
 from common.storage import Storage, get_storage
 
 router = APIRouter(prefix="/portfolios", tags=["portfolios"])
+settings = get_settings()
 
 
 @router.post("", status_code=201, response_model=PortfolioRead)
@@ -24,6 +26,15 @@ async def create_portfolio(
     user: Annotated[User, Depends(get_current_user)],
 ):
     data = await file.read()
+
+    if len(data) > settings.max_upload_bytes:
+        raise HTTPException(status_code=413, detail="file too large")
+
+    # parse up front so a bad file never creates a row or an s3 object
+    try:
+        positions = parse_portfolio(io.BytesIO(data))
+    except CSVValidationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     portfolio = Portfolio(
         user_id=user.id,
@@ -38,8 +49,8 @@ async def create_portfolio(
     storage.upload_bytes(key, data)
     portfolio.s3_key = key
 
-    # parse the same bytes into holding rows, str() keeps decimals exact
-    for position in parse_portfolio(io.BytesIO(data)):
+    # str() keeps decimals exact when going from float to Decimal
+    for position in positions:
         shares = Decimal(str(position["quantity"]))
         db.add(
             Holding(

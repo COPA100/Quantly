@@ -1,10 +1,20 @@
 import pandas as pd
 
+REQUIRED_COLUMNS = ("Symbol", "Qty (Quantity)", "Cost Basis")
+
+
+class CSVValidationError(ValueError):
+    """raised when an uploaded file is not a portfolio export we can read."""
+
 
 # clean CSV file to the symbol and quantity
 def parse_portfolio(file_path):
 
     df = pd.read_csv(file_path, skiprows=2, skipfooter=2)
+
+    missing = [c for c in REQUIRED_COLUMNS if c not in df.columns]
+    if missing:
+        raise CSVValidationError(f"missing required columns: {', '.join(missing)}")
 
     symbols = df["Symbol"].tolist()
     quantity = df["Qty (Quantity)"].tolist()
