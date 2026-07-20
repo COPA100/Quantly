@@ -10,7 +10,7 @@ from api.deps import get_current_user
 from api.schemas.portfolio import PortfolioDetail, PortfolioRead
 from common.csv_reader import parse_portfolio
 from common.db import get_db
-from common.models import Holding, Portfolio, User
+from common.models import Holding, Portfolio, PortfolioStatus, User
 from common.storage import Storage, get_storage
 
 router = APIRouter(prefix="/portfolios", tags=["portfolios"])
@@ -29,7 +29,7 @@ async def create_portfolio(
         user_id=user.id,
         original_filename=file.filename or "portfolio.csv",
         s3_key="",
-        status="pending",
+        status=PortfolioStatus.PENDING,
     )
     db.add(portfolio)
     db.flush()  # assigns the id we need for the s3 key

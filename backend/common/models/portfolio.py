@@ -1,4 +1,5 @@
 from datetime import datetime
+from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, ForeignKey, String, Text, func
@@ -13,6 +14,14 @@ if TYPE_CHECKING:
     from common.models.user import User
 
 
+class PortfolioStatus(StrEnum):
+    # pending -> processing -> complete or failed
+    PENDING = "pending"
+    PROCESSING = "processing"
+    COMPLETE = "complete"
+    FAILED = "failed"
+
+
 class Portfolio(Base):
     __tablename__ = "portfolios"
 
@@ -20,8 +29,7 @@ class Portfolio(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
     original_filename: Mapped[str] = mapped_column(String(255))
     s3_key: Mapped[str] = mapped_column(String(512))
-    # pending -> processing -> complete or failed
-    status: Mapped[str] = mapped_column(String(20), default="pending")
+    status: Mapped[str] = mapped_column(String(20), default=PortfolioStatus.PENDING)
     error_message: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
