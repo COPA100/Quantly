@@ -14,6 +14,17 @@ class Settings(BaseSettings):
     # default matches the docker-compose postgres service
     database_url: str = "postgresql+psycopg://quantly:quantly@localhost:5432/quantly"
 
+    # object storage. defaults point at the local minio in docker-compose.
+    # in prod, unset the endpoint url and let the iam role supply credentials.
+    s3_bucket: str = "quantly-portfolios"
+    s3_region: str = "us-east-1"
+    s3_endpoint_url: str | None = "http://localhost:9000"
+    aws_access_key_id: str | None = "minioadmin"
+    aws_secret_access_key: str | None = "minioadmin"
+
+    # reject uploads larger than this many bytes
+    max_upload_bytes: int = 5_000_000
+
 
 @lru_cache
 def get_settings() -> Settings:
