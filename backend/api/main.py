@@ -4,7 +4,7 @@ import tempfile
 from fastapi import FastAPI, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.routers import health
+from api.routers import health, portfolios
 from common.analytics.basic import (
     calculate_portfolio_gainloss,
     calculate_portfolio_total,
@@ -19,6 +19,7 @@ settings = get_settings()
 app = FastAPI(title=settings.app_name)
 
 app.include_router(health.router)
+app.include_router(portfolios.router)
 
 app.add_middleware(
     CORSMiddleware,
