@@ -1,3 +1,5 @@
+import io
+from decimal import Decimal
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, UploadFile
@@ -5,8 +7,9 @@ from sqlalchemy.orm import Session
 
 from api.deps import get_current_user
 from api.schemas.portfolio import PortfolioRead
+from common.csv_reader import parse_portfolio
 from common.db import get_db
-from common.models import Portfolio, User
+from common.models import Holding, Portfolio, User
 from common.storage import Storage, get_storage
 
 router = APIRouter(prefix="/portfolios", tags=["portfolios"])
@@ -33,6 +36,18 @@ async def create_portfolio(
     key = f"portfolios/{portfolio.id}/raw.csv"
     storage.upload_bytes(key, data)
     portfolio.s3_key = key
+
+    # parse the same bytes into holding rows, str() keeps decimals exact
+    for position in parse_portfolio(io.BytesIO(data)):
+        shares = Decimal(str(position["quantity"]))
+        db.add(
+            Holding(
+                portfolio_id=portfolio.id,
+                ticker=position["symbol"],
+                shares=shares,
+                cost_basis=Decimal(str(position["purchase_price"])) * shares,
+            )
+        )
 
     db.commit()
     db.refresh(portfolio)
