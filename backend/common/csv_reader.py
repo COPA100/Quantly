@@ -10,7 +10,10 @@ class CSVValidationError(ValueError):
 # clean CSV file to the symbol and quantity
 def parse_portfolio(file_path):
 
-    df = pd.read_csv(file_path, skiprows=2, skipfooter=2)
+    try:
+        df = pd.read_csv(file_path, skiprows=2, skipfooter=2)
+    except (pd.errors.EmptyDataError, pd.errors.ParserError) as exc:
+        raise CSVValidationError("file is not a readable csv") from exc
 
     missing = [c for c in REQUIRED_COLUMNS if c not in df.columns]
     if missing:
@@ -20,11 +23,15 @@ def parse_portfolio(file_path):
     quantity = df["Qty (Quantity)"].tolist()
     cost_basis = df["Cost Basis"].tolist()
 
-    purchase_price = []
-    for i in range(len(quantity)):
-        cost = float(cost_basis[i].replace("$", "").replace(",", ""))
-        price = cost / float(quantity[i])
-        purchase_price.append(price)
+    # bad numbers (blank cells, text, zero quantity) mean this isn't a real export
+    try:
+        purchase_price = []
+        for i in range(len(quantity)):
+            cost = float(str(cost_basis[i]).replace("$", "").replace(",", ""))
+            price = cost / float(quantity[i])
+            purchase_price.append(price)
+    except (ValueError, ZeroDivisionError) as exc:
+        raise CSVValidationError("could not read shares or cost basis values") from exc
 
     # return each stock as an object in a list
     positions = []
