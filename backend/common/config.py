@@ -25,6 +25,11 @@ class Settings(BaseSettings):
     # reject uploads larger than this many bytes
     max_upload_bytes: int = 5_000_000
 
+    # auth. the secret MUST be overridden in prod via QUANTLY_JWT_SECRET.
+    jwt_secret: str = "dev-insecure-secret-change-in-prod"
+    jwt_algorithm: str = "HS256"
+    access_token_expire_minutes: int = 15
+
 
 @lru_cache
 def get_settings() -> Settings:
