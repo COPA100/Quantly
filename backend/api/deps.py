@@ -1,23 +1,32 @@
 from typing import Annotated
 
-from fastapi import Depends
-from sqlalchemy import select
+from fastapi import Depends, HTTPException
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
+from api.security.tokens import TokenError, decode_access_token
 from common.db import get_db
 from common.models import User
 
-# stand-in identity until real auth lands in phase 4
-DEV_USER_EMAIL = "dev@quantly.local"
+bearer_scheme = HTTPBearer(auto_error=False)
 
 
-def get_current_user(db: Annotated[Session, Depends(get_db)]) -> User:
-    # every portfolio belongs to this seeded user for now, phase 4 swaps in
-    # the real jwt-authenticated user without changing the endpoint signatures
-    user = db.scalar(select(User).where(User.email == DEV_USER_EMAIL))
+def get_current_user(
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)],
+    db: Annotated[Session, Depends(get_db)],
+) -> User:
+    unauthorized = HTTPException(
+        status_code=401,
+        detail="not authenticated",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    if credentials is None:
+        raise unauthorized
+    try:
+        claims = decode_access_token(credentials.credentials)
+    except TokenError as exc:
+        raise unauthorized from exc
+    user = db.get(User, int(claims["sub"]))
     if user is None:
-        user = User(email=DEV_USER_EMAIL)
-        db.add(user)
-        db.commit()
-        db.refresh(user)
+        raise unauthorized
     return user

@@ -55,10 +55,19 @@ def client():
     app.dependency_overrides.clear()
 
 
+def auth_headers(http, email="owner@example.com"):
+    http.post("/auth/register", json={"email": email, "password": "hunter2pw"})
+    token = http.post("/auth/login", json={"email": email, "password": "hunter2pw"}).json()
+    return {"Authorization": f"Bearer {token['access_token']}"}
+
+
 def test_upload_then_list_and_detail(client):
     http, storage = client
+    headers = auth_headers(http)
 
-    created = http.post("/portfolios", files={"file": ("p.csv", VALID_CSV, "text/csv")})
+    created = http.post(
+        "/portfolios", files={"file": ("p.csv", VALID_CSV, "text/csv")}, headers=headers
+    )
     assert created.status_code == 201
     body = created.json()
     assert body["status"] == "pending"
@@ -68,22 +77,31 @@ def test_upload_then_list_and_detail(client):
     assert any(key.endswith("raw.csv") for key in storage.objects)
 
     # it shows up in the list
-    listed = http.get("/portfolios")
+    listed = http.get("/portfolios", headers=headers)
     assert listed.status_code == 200
     assert [p["id"] for p in listed.json()] == [pid]
 
     # detail carries the parsed holdings
-    detail = http.get(f"/portfolios/{pid}")
+    detail = http.get(f"/portfolios/{pid}", headers=headers)
     assert detail.status_code == 200
     assert [h["ticker"] for h in detail.json()["holdings"]] == ["AAPL", "MSFT"]
 
 
 def test_missing_portfolio_returns_404(client):
     http, _ = client
-    assert http.get("/portfolios/999999").status_code == 404
+    headers = auth_headers(http)
+    assert http.get("/portfolios/999999", headers=headers).status_code == 404
 
 
 def test_malformed_upload_returns_422(client):
     http, _ = client
-    resp = http.post("/portfolios", files={"file": ("x.csv", b"garbage", "text/csv")})
+    headers = auth_headers(http)
+    resp = http.post(
+        "/portfolios", files={"file": ("x.csv", b"garbage", "text/csv")}, headers=headers
+    )
     assert resp.status_code == 422
+
+
+def test_portfolio_routes_require_auth(client):
+    http, _ = client
+    assert http.get("/portfolios").status_code == 401
