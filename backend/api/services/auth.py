@@ -91,3 +91,24 @@ def revoke_refresh_token(db: Session, raw: str) -> None:
     row = db.scalar(select(RefreshToken).where(RefreshToken.token_hash == hash_refresh_token(raw)))
     if row is not None and row.revoked_at is None:
         row.revoked_at = datetime.now(UTC)
+
+
+def revoke_all_for_user(db: Session, user_id: int) -> int:
+    # kills every live session for the user, returns how many were revoked
+    now = datetime.now(UTC)
+    rows = db.scalars(
+        select(RefreshToken).where(
+            RefreshToken.user_id == user_id, RefreshToken.revoked_at.is_(None)
+        )
+    ).all()
+    for row in rows:
+        row.revoked_at = now
+    return len(rows)
+
+
+def revoke_all_devices(db: Session, raw: str) -> None:
+    # identify the user from one of their refresh tokens, then revoke them all
+    row = db.scalar(select(RefreshToken).where(RefreshToken.token_hash == hash_refresh_token(raw)))
+    if row is None:
+        raise InvalidTokenError()
+    revoke_all_for_user(db, row.user_id)

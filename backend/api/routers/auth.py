@@ -12,6 +12,7 @@ from api.services.auth import (
     authenticate_user,
     issue_refresh_token,
     register_user,
+    revoke_all_devices,
     revoke_refresh_token,
     rotate_refresh_token,
 )
@@ -57,4 +58,13 @@ def refresh(payload: RefreshRequest, db: Annotated[Session, Depends(get_db)]):
 @router.post("/logout", status_code=204)
 def logout(payload: RefreshRequest, db: Annotated[Session, Depends(get_db)]):
     revoke_refresh_token(db, payload.refresh_token)
+    db.commit()
+
+
+@router.post("/logout-all", status_code=204)
+def logout_all(payload: RefreshRequest, db: Annotated[Session, Depends(get_db)]):
+    try:
+        revoke_all_devices(db, payload.refresh_token)
+    except InvalidTokenError as exc:
+        raise HTTPException(status_code=401, detail="invalid refresh token") from exc
     db.commit()
