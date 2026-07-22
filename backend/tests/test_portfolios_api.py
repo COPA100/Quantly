@@ -105,3 +105,20 @@ def test_malformed_upload_returns_422(client):
 def test_portfolio_routes_require_auth(client):
     http, _ = client
     assert http.get("/portfolios").status_code == 401
+
+
+def test_users_only_see_their_own_portfolios(client):
+    http, _ = client
+    alice = auth_headers(http, email="alice@example.com")
+    bob = auth_headers(http, email="bob@example.com")
+
+    created = http.post(
+        "/portfolios", files={"file": ("p.csv", VALID_CSV, "text/csv")}, headers=alice
+    )
+    pid = created.json()["id"]
+
+    # bob cannot see alice's portfolio in his list, nor fetch it by id
+    assert http.get("/portfolios", headers=bob).json() == []
+    assert http.get(f"/portfolios/{pid}", headers=bob).status_code == 404
+    # alice still can
+    assert http.get(f"/portfolios/{pid}", headers=alice).status_code == 200
