@@ -3,8 +3,15 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from api.schemas.auth import RegisterRequest, UserRead
-from api.services.auth import EmailTakenError, register_user
+from api.schemas.auth import LoginRequest, RegisterRequest, TokenPair, UserRead
+from api.security.tokens import create_access_token
+from api.services.auth import (
+    EmailTakenError,
+    InvalidCredentialsError,
+    authenticate_user,
+    issue_refresh_token,
+    register_user,
+)
 from common.db import get_db
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -19,3 +26,15 @@ def register(payload: RegisterRequest, db: Annotated[Session, Depends(get_db)]):
     db.commit()
     db.refresh(user)
     return user
+
+
+@router.post("/login", response_model=TokenPair)
+def login(payload: LoginRequest, db: Annotated[Session, Depends(get_db)]):
+    try:
+        user = authenticate_user(db, payload.email, payload.password)
+    except InvalidCredentialsError as exc:
+        raise HTTPException(status_code=401, detail="invalid email or password") from exc
+    access = create_access_token(user.id)
+    refresh = issue_refresh_token(db, user.id)
+    db.commit()
+    return TokenPair(access_token=access, refresh_token=refresh)
