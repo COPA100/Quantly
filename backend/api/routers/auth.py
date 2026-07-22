@@ -9,6 +9,7 @@ from api.services.auth import (
     EmailTakenError,
     InvalidCredentialsError,
     InvalidTokenError,
+    TokenReuseError,
     authenticate_user,
     issue_refresh_token,
     register_user,
@@ -48,6 +49,9 @@ def login(payload: LoginRequest, db: Annotated[Session, Depends(get_db)]):
 def refresh(payload: RefreshRequest, db: Annotated[Session, Depends(get_db)]):
     try:
         user, new_refresh = rotate_refresh_token(db, payload.refresh_token)
+    except TokenReuseError as exc:
+        db.commit()  # persist the family-wide revocation before rejecting
+        raise HTTPException(status_code=401, detail="refresh token reuse detected") from exc
     except InvalidTokenError as exc:
         raise HTTPException(status_code=401, detail="invalid refresh token") from exc
     access = create_access_token(user.id)

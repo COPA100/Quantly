@@ -25,6 +25,10 @@ class InvalidTokenError(AuthError):
     """the refresh token is unknown, expired, or already revoked."""
 
 
+class TokenReuseError(InvalidTokenError):
+    """a revoked refresh token was replayed, the whole token family is revoked."""
+
+
 def _as_aware_utc(dt: datetime) -> datetime:
     # sqlite returns naive datetimes, postgres returns aware ones, normalize both
     return dt if dt.tzinfo is not None else dt.replace(tzinfo=UTC)
@@ -73,8 +77,15 @@ def issue_refresh_token(db: Session, user_id: int) -> str:
 def rotate_refresh_token(db: Session, raw: str) -> tuple[User, str]:
     # single use: the presented token is revoked and a fresh one is issued
     row = db.scalar(select(RefreshToken).where(RefreshToken.token_hash == hash_refresh_token(raw)))
-    if row is None or row.revoked_at is not None:
+    if row is None:
         raise InvalidTokenError()
+
+    if row.revoked_at is not None:
+        # a revoked token being presented again means it leaked and someone is
+        # replaying it. revoke the whole family so attacker and victim are both
+        # cut off and forced to log in again.
+        revoke_all_for_user(db, row.user_id)
+        raise TokenReuseError()
 
     now = datetime.now(UTC)
     if _as_aware_utc(row.expires_at) <= now:
