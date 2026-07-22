@@ -1,3 +1,5 @@
+import hashlib
+import secrets
 from datetime import UTC, datetime, timedelta
 
 import jwt
@@ -30,3 +32,13 @@ def decode_access_token(token: str) -> dict:
     if claims.get("type") != "access":
         raise TokenError("wrong token type")
     return claims
+
+
+def generate_refresh_token() -> str:
+    # opaque random string, never a jwt, so it carries no readable claims
+    return secrets.token_urlsafe(32)
+
+
+def hash_refresh_token(raw: str) -> str:
+    # only the hash is stored, a db leak cannot reveal usable tokens
+    return hashlib.sha256(raw.encode()).hexdigest()
