@@ -12,6 +12,7 @@ from api.services.auth import (
     authenticate_user,
     issue_refresh_token,
     register_user,
+    revoke_refresh_token,
     rotate_refresh_token,
 )
 from common.db import get_db
@@ -51,3 +52,9 @@ def refresh(payload: RefreshRequest, db: Annotated[Session, Depends(get_db)]):
     access = create_access_token(user.id)
     db.commit()
     return TokenPair(access_token=access, refresh_token=new_refresh)
+
+
+@router.post("/logout", status_code=204)
+def logout(payload: RefreshRequest, db: Annotated[Session, Depends(get_db)]):
+    revoke_refresh_token(db, payload.refresh_token)
+    db.commit()

@@ -84,3 +84,10 @@ def rotate_refresh_token(db: Session, raw: str) -> tuple[User, str]:
     new_raw, new_row = _new_refresh_token(db, row.user_id)
     row.replaced_by = new_row.id
     return db.get(User, row.user_id), new_raw
+
+
+def revoke_refresh_token(db: Session, raw: str) -> None:
+    # idempotent: logging out with an unknown or already-dead token still succeeds
+    row = db.scalar(select(RefreshToken).where(RefreshToken.token_hash == hash_refresh_token(raw)))
+    if row is not None and row.revoked_at is None:
+        row.revoked_at = datetime.now(UTC)
