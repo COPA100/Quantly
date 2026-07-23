@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     # reject uploads larger than this many bytes
     max_upload_bytes: int = 5_000_000
 
+    # redis (celery broker later, and the current-price cache now)
+    redis_url: str = "redis://localhost:6379/0"
+    current_price_ttl_seconds: int = 900  # 15 min
+
     # auth. the secret MUST be overridden in prod via QUANTLY_JWT_SECRET.
     jwt_secret: str = "dev-insecure-secret-change-in-prod"
     jwt_algorithm: str = "HS256"
