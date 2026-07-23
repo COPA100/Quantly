@@ -69,15 +69,22 @@ def _new_refresh_token(db: Session, user_id: int) -> tuple[str, RefreshToken]:
 
 
 def get_or_create_google_user(db: Session, claims: dict) -> User:
+    google_sub = claims["sub"]
+    email = claims["email"].lower()
+
     # returning google users are matched on their stable subject id
-    user = db.scalar(select(User).where(User.google_sub == claims["sub"]))
+    user = db.scalar(select(User).where(User.google_sub == google_sub))
     if user is not None:
         return user
-    user = User(
-        email=claims["email"].lower(),
-        auth_provider="google",
-        google_sub=claims["sub"],
-    )
+
+    # same verified email as an existing account (e.g. one made with a password):
+    # link google to it rather than creating a duplicate
+    user = db.scalar(select(User).where(User.email == email))
+    if user is not None:
+        user.google_sub = google_sub
+        return user
+
+    user = User(email=email, auth_provider="google", google_sub=google_sub)
     db.add(user)
     db.flush()
     return user
