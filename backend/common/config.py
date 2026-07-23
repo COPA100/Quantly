@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     current_price_ttl_seconds: int = 900  # 15 min
 
+    # how many years of daily history to keep per ticker
+    history_years: int = 5
+
     # auth. the secret MUST be overridden in prod via QUANTLY_JWT_SECRET.
     jwt_secret: str = "dev-insecure-secret-change-in-prod"
     jwt_algorithm: str = "HS256"
