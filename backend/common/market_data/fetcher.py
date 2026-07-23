@@ -9,8 +9,12 @@ from common.config import get_settings
 
 
 def fetch_current_price(ticker: str) -> float | None:
-    # latest daily close from yahoo, None when the ticker returns nothing
-    hist = yf.Ticker(ticker).history(period="1d", auto_adjust=False)
+    # latest daily close from yahoo, None for an invalid or delisted ticker
+    try:
+        hist = yf.Ticker(ticker).history(period="1d", auto_adjust=False)
+    except Exception:
+        # yahoo is unofficial and can throw on bad symbols or transient errors
+        return None
     if hist.empty:
         return None
     return round(float(hist["Close"].iloc[-1]), 2)
@@ -23,10 +27,14 @@ def _num(value) -> float | None:
 def fetch_history(ticker: str, start: date | None = None) -> list[dict]:
     # daily bars from yahoo, full retention window by default or since `start`
     tk = yf.Ticker(ticker)
-    if start is None:
-        hist = tk.history(period=f"{get_settings().history_years}y", auto_adjust=False)
-    else:
-        hist = tk.history(start=start.isoformat(), auto_adjust=False)
+    try:
+        if start is None:
+            hist = tk.history(period=f"{get_settings().history_years}y", auto_adjust=False)
+        else:
+            hist = tk.history(start=start.isoformat(), auto_adjust=False)
+    except Exception:
+        # invalid/delisted ticker or a transient yahoo error, treated as no data
+        return []
     if hist.empty:
         return []
 
