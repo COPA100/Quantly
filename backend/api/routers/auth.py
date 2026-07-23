@@ -85,7 +85,7 @@ def logout_all(payload: RefreshRequest, db: Annotated[Session, Depends(get_db)])
     db.commit()
 
 
-@router.post("/google", response_model=UserRead)
+@router.post("/google", response_model=TokenPair)
 def google_login(
     payload: GoogleLoginRequest,
     db: Annotated[Session, Depends(get_db)],
@@ -96,6 +96,8 @@ def google_login(
     except GoogleAuthError as exc:
         raise HTTPException(status_code=401, detail="invalid google token") from exc
     user = get_or_create_google_user(db, claims)
+    # downstream everything is our own jwt, same as password login
+    access = create_access_token(user.id)
+    refresh = issue_refresh_token(db, user.id)
     db.commit()
-    db.refresh(user)
-    return user
+    return TokenPair(access_token=access, refresh_token=refresh)
