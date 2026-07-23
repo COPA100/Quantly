@@ -20,6 +20,28 @@ def fetch_current_price(ticker: str) -> float | None:
     return round(float(hist["Close"].iloc[-1]), 2)
 
 
+def fetch_current_prices(tickers: list[str]) -> dict[str, float]:
+    # one yahoo call for many tickers, missing/invalid ones are just left out
+    tickers = [t.upper() for t in tickers]
+    if not tickers:
+        return {}
+    try:
+        data = yf.download(tickers, period="1d", interval="1d", progress=False, auto_adjust=False)
+    except Exception:
+        return {}
+    if data.empty:
+        return {}
+
+    last = data["Close"].iloc[-1]
+    prices = {}
+    for ticker in tickers:
+        # multi-ticker gives a series indexed by ticker, single gives a scalar
+        value = last[ticker] if ticker in getattr(last, "index", []) else last
+        if not pd.isna(value):
+            prices[ticker] = round(float(value), 2)
+    return prices
+
+
 def _num(value) -> float | None:
     return None if pd.isna(value) else float(value)
 
