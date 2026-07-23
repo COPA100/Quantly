@@ -4,11 +4,17 @@ from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
+from api.security.google import verify_google_id_token
 from api.security.tokens import TokenError, decode_access_token
 from common.db import get_db
 from common.models import User
 
 bearer_scheme = HTTPBearer(auto_error=False)
+
+
+def get_google_verifier():
+    # indirection so tests can swap in a fake verifier without calling google
+    return verify_google_id_token
 
 
 def get_current_user(

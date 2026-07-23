@@ -68,6 +68,21 @@ def _new_refresh_token(db: Session, user_id: int) -> tuple[str, RefreshToken]:
     return raw, token
 
 
+def get_or_create_google_user(db: Session, claims: dict) -> User:
+    # returning google users are matched on their stable subject id
+    user = db.scalar(select(User).where(User.google_sub == claims["sub"]))
+    if user is not None:
+        return user
+    user = User(
+        email=claims["email"].lower(),
+        auth_provider="google",
+        google_sub=claims["sub"],
+    )
+    db.add(user)
+    db.flush()
+    return user
+
+
 def issue_refresh_token(db: Session, user_id: int) -> str:
     # store the hash, hand the caller the raw token to give the client
     raw, _ = _new_refresh_token(db, user_id)

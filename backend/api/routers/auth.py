@@ -1,9 +1,19 @@
+from collections.abc import Callable
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from api.schemas.auth import LoginRequest, RefreshRequest, RegisterRequest, TokenPair, UserRead
+from api.deps import get_google_verifier
+from api.schemas.auth import (
+    GoogleLoginRequest,
+    LoginRequest,
+    RefreshRequest,
+    RegisterRequest,
+    TokenPair,
+    UserRead,
+)
+from api.security.google import GoogleAuthError
 from api.security.tokens import create_access_token
 from api.services.auth import (
     EmailTakenError,
@@ -11,6 +21,7 @@ from api.services.auth import (
     InvalidTokenError,
     TokenReuseError,
     authenticate_user,
+    get_or_create_google_user,
     issue_refresh_token,
     register_user,
     revoke_all_devices,
@@ -72,3 +83,19 @@ def logout_all(payload: RefreshRequest, db: Annotated[Session, Depends(get_db)])
     except InvalidTokenError as exc:
         raise HTTPException(status_code=401, detail="invalid refresh token") from exc
     db.commit()
+
+
+@router.post("/google", response_model=UserRead)
+def google_login(
+    payload: GoogleLoginRequest,
+    db: Annotated[Session, Depends(get_db)],
+    verify: Annotated[Callable[[str], dict], Depends(get_google_verifier)],
+):
+    try:
+        claims = verify(payload.id_token)
+    except GoogleAuthError as exc:
+        raise HTTPException(status_code=401, detail="invalid google token") from exc
+    user = get_or_create_google_user(db, claims)
+    db.commit()
+    db.refresh(user)
+    return user
