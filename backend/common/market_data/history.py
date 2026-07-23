@@ -40,3 +40,19 @@ def refresh_history(db: Session, ticker: str) -> int:
         bars = [bar for bar in bars if bar["date"] > last]
     store_bars(db, ticker, bars)
     return len(bars)
+
+
+def get_price_history(db: Session, ticker: str) -> list[Price]:
+    return db.scalars(
+        select(Price).where(Price.ticker == ticker.upper()).order_by(Price.date)
+    ).all()
+
+
+def ensure_history(db: Session, ticker: str, as_of: date | None = None) -> list[Price]:
+    # the prices table is shared, so a ticker already fetched today is reused
+    # as-is. only stale or missing tickers hit yahoo again.
+    as_of = as_of or date.today()
+    last = latest_stored_date(db, ticker)
+    if last is None or last < as_of:
+        refresh_history(db, ticker)
+    return get_price_history(db, ticker)
