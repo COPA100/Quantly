@@ -51,3 +51,22 @@ def sortino_ratio(
     if downside_dev < 1e-12:
         return 0.0  # nothing below target, ratio is undefined
     return float(np.mean(excess) / downside_dev * np.sqrt(periods_per_year))
+
+
+def max_drawdown(returns) -> dict:
+    # worst peak-to-trough decline and the longest time spent below a prior peak
+    returns = np.asarray(returns, dtype=float)
+    if returns.size == 0:
+        return {"max_drawdown": 0.0, "duration": 0}
+
+    # start the equity curve at 1.0 so a decline from day one is counted
+    equity = np.concatenate([[1.0], np.cumprod(1.0 + returns)])
+    running_max = np.maximum.accumulate(equity)
+    drawdowns = equity / running_max - 1.0
+
+    longest = current = 0
+    for underwater in drawdowns < 0:
+        current = current + 1 if underwater else 0
+        longest = max(longest, current)
+
+    return {"max_drawdown": float(drawdowns.min()), "duration": int(longest)}
