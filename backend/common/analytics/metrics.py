@@ -36,3 +36,18 @@ def sharpe_ratio(
     if std < 1e-12:
         return 0.0
     return float(np.mean(excess) / std * np.sqrt(periods_per_year))
+
+
+def sortino_ratio(
+    returns, risk_free_rate: float = 0.0, periods_per_year: int = TRADING_DAYS
+) -> float:
+    # like sharpe but only downside volatility is penalized
+    returns = np.asarray(returns, dtype=float)
+    if returns.size < 2:
+        return 0.0
+    excess = returns - risk_free_rate / periods_per_year
+    downside = np.minimum(excess, 0.0)
+    downside_dev = np.sqrt(np.mean(downside**2))
+    if downside_dev < 1e-12:
+        return 0.0  # nothing below target, ratio is undefined
+    return float(np.mean(excess) / downside_dev * np.sqrt(periods_per_year))
