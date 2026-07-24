@@ -86,3 +86,28 @@ def beta(asset_returns, benchmark_returns) -> float:
         return 0.0
     covariance = np.cov(asset, bench, ddof=1)[0, 1]
     return float(covariance / variance)
+
+
+def correlation_matrix(returns_by_ticker: dict[str, object]) -> dict:
+    # pairwise return correlations across the holdings
+    tickers = list(returns_by_ticker)
+    series = [np.asarray(returns_by_ticker[t], dtype=float) for t in tickers]
+    n = min((s.size for s in series), default=0)
+    if len(tickers) < 2 or n < 2:
+        size = len(tickers)
+        identity = [[1.0 if i == j else 0.0 for j in range(size)] for i in range(size)]
+        return {"tickers": tickers, "matrix": identity}
+
+    # align every series on the most recent overlapping window
+    stacked = np.vstack([s[-n:] for s in series])
+    return {"tickers": tickers, "matrix": np.corrcoef(stacked).tolist()}
+
+
+def average_correlation(matrix: list[list[float]]) -> float:
+    # mean of the off-diagonal correlations, the "am i really diversified" number
+    size = len(matrix)
+    if size < 2:
+        return 0.0
+    total = sum(matrix[i][j] for i in range(size) for j in range(i + 1, size))
+    pairs = size * (size - 1) / 2
+    return float(total / pairs)
