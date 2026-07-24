@@ -10,3 +10,14 @@ def annualized_volatility(returns, periods_per_year: int = TRADING_DAYS) -> floa
     if returns.size < 2:
         return 0.0
     return float(np.std(returns, ddof=1) * np.sqrt(periods_per_year))
+
+
+def annualized_return(returns, periods_per_year: int = TRADING_DAYS) -> float:
+    # geometric (compounded) growth rate, i.e. cagr of the return series
+    returns = np.asarray(returns, dtype=float)
+    if returns.size == 0:
+        return 0.0
+    cumulative = float(np.prod(1.0 + returns))
+    if cumulative <= 0:
+        return -1.0  # the position was wiped out
+    return cumulative ** (periods_per_year / returns.size) - 1.0
