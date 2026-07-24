@@ -70,3 +70,19 @@ def max_drawdown(returns) -> dict:
         longest = max(longest, current)
 
     return {"max_drawdown": float(drawdowns.min()), "duration": int(longest)}
+
+
+def beta(asset_returns, benchmark_returns) -> float:
+    # sensitivity to the market: cov(asset, market) / var(market)
+    asset = np.asarray(asset_returns, dtype=float)
+    bench = np.asarray(benchmark_returns, dtype=float)
+    n = min(asset.size, bench.size)
+    if n < 2:
+        return 0.0
+    # align on the most recent overlapping window
+    asset, bench = asset[-n:], bench[-n:]
+    variance = np.var(bench, ddof=1)
+    if variance < 1e-12:
+        return 0.0
+    covariance = np.cov(asset, bench, ddof=1)[0, 1]
+    return float(covariance / variance)
