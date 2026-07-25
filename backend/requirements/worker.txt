@@ -1,3 +1,5 @@
 -r base.txt
 
-# Async processing (Celery + Redis) added in the async-processing phase.
+# async processing. the redis extra just pins the redis-py client, which base
+# already provides. celery's broker + result backend both run on redis.
+celery[redis]==5.6.3

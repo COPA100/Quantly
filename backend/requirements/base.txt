@@ -7,7 +7,8 @@ sqlalchemy==2.0.51
 alembic==1.18.5
 psycopg[binary]==3.3.4
 boto3==1.43.52
-redis==8.0.1
+# capped below 7.0: celery's kombu (worker.txt) requires redis-py <7.0
+redis==6.4.0
 pandas==2.3.3
 numpy==2.3.4
 yfinance==0.2.66
