@@ -1,15 +1,29 @@
 from datetime import UTC, datetime
+from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 
 from common.db import SessionLocal
-from common.models import Job, Portfolio, PortfolioStatus
+from common.models import AnalyticsResult, Job, Portfolio, PortfolioStatus
 from worker.analysis import compute_analytics
 from worker.celery_app import celery_app
 
 
 def _utcnow() -> datetime:
     return datetime.now(UTC)
+
+
+def _persist_results(db, portfolio_id: int, results: dict[str, Any]) -> None:
+    # replace any prior run so re-analyzing a portfolio is idempotent
+    db.execute(delete(AnalyticsResult).where(AnalyticsResult.portfolio_id == portfolio_id))
+    for metric_name, metric_value in results.items():
+        db.add(
+            AnalyticsResult(
+                portfolio_id=portfolio_id,
+                metric_name=metric_name,
+                metric_value=metric_value,
+            )
+        )
 
 
 def _job_for_task(db, task_id: str | None) -> Job | None:
@@ -61,7 +75,7 @@ def analyze_portfolio(self, portfolio_id: int) -> dict:
 
         try:
             results = compute_analytics(db, portfolio)
-            # slice 6: persist `results` into analytics_results
+            _persist_results(db, portfolio_id, results)
             portfolio.status = PortfolioStatus.COMPLETE
             portfolio.error_message = None
             _finish_job(db, job_id, "succeeded")
