@@ -40,6 +40,23 @@ services:
     volumes:
       - minio_data:/data
 
+  # celery worker: consumes analysis jobs off redis, talks to postgres + minio
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.worker
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      QUANTLY_DATABASE_URL: postgresql+psycopg://quantly:quantly@postgres:5432/quantly
+      QUANTLY_REDIS_URL: redis://redis:6379/0
+      QUANTLY_CELERY_BROKER_URL: redis://redis:6379/1
+      QUANTLY_CELERY_RESULT_BACKEND: redis://redis:6379/2
+      QUANTLY_S3_ENDPOINT_URL: http://minio:9000
+
   # one-shot: wait for minio then create the bucket the app expects
   createbuckets:
     image: minio/mc:latest
