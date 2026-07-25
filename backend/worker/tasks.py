@@ -4,6 +4,7 @@ from sqlalchemy import select
 
 from common.db import SessionLocal
 from common.models import Job, Portfolio, PortfolioStatus
+from worker.analysis import compute_analytics
 from worker.celery_app import celery_app
 
 
@@ -59,12 +60,17 @@ def analyze_portfolio(self, portfolio_id: int) -> dict:
         db.commit()
 
         try:
-            # slices 5-6: download csv, fetch prices, compute + persist analytics
+            results = compute_analytics(db, portfolio)
+            # slice 6: persist `results` into analytics_results
             portfolio.status = PortfolioStatus.COMPLETE
             portfolio.error_message = None
             _finish_job(db, job_id, "succeeded")
             db.commit()
-            return {"portfolio_id": portfolio_id, "status": str(PortfolioStatus.COMPLETE)}
+            return {
+                "portfolio_id": portfolio_id,
+                "status": str(PortfolioStatus.COMPLETE),
+                "metrics": list(results),
+            }
         except Exception as exc:
             db.rollback()
             _mark_failed(db, portfolio_id, job_id, exc)
