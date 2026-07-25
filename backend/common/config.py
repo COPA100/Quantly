@@ -34,6 +34,10 @@ class Settings(BaseSettings):
     celery_broker_url: str = "redis://localhost:6379/1"
     celery_result_backend: str = "redis://localhost:6379/2"
 
+    # computed analytics cached by holdings+as-of hash. one day, since a given
+    # book's metrics only change when prices roll over to the next day.
+    analytics_cache_ttl_seconds: int = 86400
+
     # how many years of daily history to keep per ticker
     history_years: int = 5
 

@@ -11,6 +11,7 @@ from common.csv_reader import parse_portfolio
 from common.market_data import ensure_benchmark, ensure_history, get_current_prices
 from common.models import Portfolio, Price
 from common.storage import get_storage
+from worker.cache import get_cached, holdings_digest, set_cached
 
 
 def _adj_closes(prices: list[Price]) -> np.ndarray:
@@ -64,6 +65,13 @@ def compute_analytics(db, portfolio: Portfolio, as_of: date | None = None) -> di
     raw = get_storage().download_bytes(portfolio.s3_key)
     positions = parse_portfolio(io.BytesIO(raw))
     tickers = [str(p["symbol"]).upper() for p in positions]
+
+    # identical book on the same day -> reuse the cached metrics, skip the
+    # market-data fetch and the whole computation below
+    digest = holdings_digest(positions, as_of)
+    cached = get_cached(digest)
+    if cached is not None:
+        return cached
 
     # current prices value the book; a missing quote falls back to cost
     current = get_current_prices(tickers)
@@ -120,4 +128,6 @@ def compute_analytics(db, portfolio: Portfolio, as_of: date | None = None) -> di
             "concentration": insights.concentration_insight(top_weight, top_n),
         },
     }
-    return _json_safe(results)
+    results = _json_safe(results)
+    set_cached(digest, results)
+    return results
