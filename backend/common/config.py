@@ -25,9 +25,14 @@ class Settings(BaseSettings):
     # reject uploads larger than this many bytes
     max_upload_bytes: int = 5_000_000
 
-    # redis (celery broker later, and the current-price cache now)
+    # redis. db 0 is the current-price cache, celery gets its own dbs below so
+    # broker/result keys never collide with cached prices.
     redis_url: str = "redis://localhost:6379/0"
     current_price_ttl_seconds: int = 900  # 15 min
+
+    # celery broker (queued tasks) and result backend (task state/return values)
+    celery_broker_url: str = "redis://localhost:6379/1"
+    celery_result_backend: str = "redis://localhost:6379/2"
 
     # how many years of daily history to keep per ticker
     history_years: int = 5
