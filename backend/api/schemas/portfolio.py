@@ -28,3 +28,10 @@ class PortfolioRead(BaseModel):
 class PortfolioDetail(PortfolioRead):
     # same as the list shape plus the parsed positions
     holdings: list[HoldingRead]
+
+
+class PortfolioAccepted(BaseModel):
+    # 202 response: the upload is stored, analysis runs async under this job
+    id: int
+    status: str
+    job_id: int

@@ -1,4 +1,5 @@
 import io
+from collections.abc import Callable
 from decimal import Decimal
 from typing import Annotated
 
@@ -6,24 +7,25 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from api.deps import get_current_user
-from api.schemas.portfolio import PortfolioDetail, PortfolioRead
+from api.deps import get_current_user, get_enqueuer
+from api.schemas.portfolio import PortfolioAccepted, PortfolioDetail, PortfolioRead
 from common.config import get_settings
 from common.csv_reader import CSVValidationError, parse_portfolio
 from common.db import get_db
-from common.models import Holding, Portfolio, PortfolioStatus, User
+from common.models import Holding, Job, Portfolio, PortfolioStatus, User
 from common.storage import Storage, get_storage
 
 router = APIRouter(prefix="/portfolios", tags=["portfolios"])
 settings = get_settings()
 
 
-@router.post("", status_code=201, response_model=PortfolioRead)
+@router.post("", status_code=202, response_model=PortfolioAccepted)
 async def create_portfolio(
     file: UploadFile,
     db: Annotated[Session, Depends(get_db)],
     storage: Annotated[Storage, Depends(get_storage)],
     user: Annotated[User, Depends(get_current_user)],
+    enqueue: Annotated[Callable[[int], str], Depends(get_enqueuer)],
 ):
     data = await file.read()
 
@@ -62,8 +64,15 @@ async def create_portfolio(
         )
 
     db.commit()
-    db.refresh(portfolio)
-    return portfolio
+
+    # hand the analysis off to the worker and record the job for polling
+    task_id = enqueue(portfolio.id)
+    job = Job(portfolio_id=portfolio.id, celery_task_id=task_id, status="queued")
+    db.add(job)
+    db.commit()
+    db.refresh(job)
+
+    return PortfolioAccepted(id=portfolio.id, status=portfolio.status, job_id=job.id)
 
 
 @router.get("", response_model=list[PortfolioRead])

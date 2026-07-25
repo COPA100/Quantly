@@ -5,6 +5,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 import common.models  # noqa: F401  registers every model on the metadata
+from api.deps import get_enqueuer
 from api.main import app
 from common.db import Base, get_db
 from common.storage import get_storage
@@ -51,6 +52,8 @@ def client():
     storage = FakeStorage()
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_storage] = lambda: storage
+    # fake enqueue: no broker, just hand back a task id like celery would
+    app.dependency_overrides[get_enqueuer] = lambda: (lambda pid: f"task-{pid}")
     yield TestClient(app), storage
     app.dependency_overrides.clear()
 
@@ -68,9 +71,11 @@ def test_upload_then_list_and_detail(client):
     created = http.post(
         "/portfolios", files={"file": ("p.csv", VALID_CSV, "text/csv")}, headers=headers
     )
-    assert created.status_code == 201
+    assert created.status_code == 202
     body = created.json()
     assert body["status"] == "pending"
+    # analysis was enqueued and a job recorded for polling
+    assert body["job_id"] > 0
     pid = body["id"]
 
     # raw csv actually went to storage

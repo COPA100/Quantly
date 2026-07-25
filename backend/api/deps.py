@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from typing import Annotated
 
 from fastapi import Depends, HTTPException
@@ -15,6 +16,18 @@ bearer_scheme = HTTPBearer(auto_error=False)
 def get_google_verifier():
     # indirection so tests can swap in a fake verifier without calling google
     return verify_google_id_token
+
+
+def get_enqueuer() -> Callable[[int], str]:
+    # indirection so tests can enqueue without a live broker. imported lazily so
+    # the module loads even where only the api half is installed.
+    from worker.celery_app import celery_app
+
+    def enqueue(portfolio_id: int) -> str:
+        result = celery_app.send_task("analyze_portfolio", args=[portfolio_id])
+        return result.id
+
+    return enqueue
 
 
 def get_current_user(
