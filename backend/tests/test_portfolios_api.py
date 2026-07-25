@@ -98,6 +98,37 @@ def test_missing_portfolio_returns_404(client):
     assert http.get("/portfolios/999999", headers=headers).status_code == 404
 
 
+def test_status_endpoint_reports_portfolio_and_job(client):
+    http, _ = client
+    headers = auth_headers(http)
+
+    created = http.post(
+        "/portfolios", files={"file": ("p.csv", VALID_CSV, "text/csv")}, headers=headers
+    )
+    pid = created.json()["id"]
+
+    status = http.get(f"/portfolios/{pid}/status", headers=headers)
+    assert status.status_code == 200
+    body = status.json()
+    assert body["id"] == pid
+    assert body["status"] == "pending"
+    # a queued job was recorded and not yet finished
+    assert body["job"]["status"] == "queued"
+    assert body["job"]["finished_at"] is None
+
+
+def test_status_of_other_users_portfolio_is_404(client):
+    http, _ = client
+    alice = auth_headers(http, email="alice@example.com")
+    bob = auth_headers(http, email="bob@example.com")
+
+    created = http.post(
+        "/portfolios", files={"file": ("p.csv", VALID_CSV, "text/csv")}, headers=alice
+    )
+    pid = created.json()["id"]
+    assert http.get(f"/portfolios/{pid}/status", headers=bob).status_code == 404
+
+
 def test_malformed_upload_returns_422(client):
     http, _ = client
     headers = auth_headers(http)

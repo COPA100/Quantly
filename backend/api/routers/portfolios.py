@@ -8,7 +8,12 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from api.deps import get_current_user, get_enqueuer
-from api.schemas.portfolio import PortfolioAccepted, PortfolioDetail, PortfolioRead
+from api.schemas.portfolio import (
+    PortfolioAccepted,
+    PortfolioDetail,
+    PortfolioRead,
+    PortfolioStatusRead,
+)
 from common.config import get_settings
 from common.csv_reader import CSVValidationError, parse_portfolio
 from common.db import get_db
@@ -97,3 +102,22 @@ def get_portfolio(
     if portfolio is None:
         raise HTTPException(status_code=404, detail="portfolio not found")
     return portfolio
+
+
+@router.get("/{portfolio_id}/status", response_model=PortfolioStatusRead)
+def get_portfolio_status(
+    portfolio_id: int,
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[User, Depends(get_current_user)],
+):
+    # lightweight endpoint the client polls while analysis runs
+    portfolio = db.scalar(
+        select(Portfolio).where(Portfolio.id == portfolio_id, Portfolio.user_id == user.id)
+    )
+    if portfolio is None:
+        raise HTTPException(status_code=404, detail="portfolio not found")
+
+    latest_job = db.scalar(
+        select(Job).where(Job.portfolio_id == portfolio_id).order_by(Job.id.desc())
+    )
+    return PortfolioStatusRead(id=portfolio.id, status=portfolio.status, job=latest_job)

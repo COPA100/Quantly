@@ -35,3 +35,21 @@ class PortfolioAccepted(BaseModel):
     id: int
     status: str
     job_id: int
+
+
+class JobStatusRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    status: str
+    started_at: datetime | None
+    finished_at: datetime | None
+
+
+class PortfolioStatusRead(BaseModel):
+    # what the frontend polls: portfolio status plus its most recent job
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    status: str
+    job: JobStatusRead | None
