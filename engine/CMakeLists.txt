@@ -9,6 +9,7 @@ find_package(pybind11 CONFIG REQUIRED)
 pybind11_add_module(_engine
   src/cpp/module.cpp
   src/cpp/drawdown.cpp
+  src/cpp/correlation.cpp
 )
 target_include_directories(_engine PRIVATE src/cpp)
 
