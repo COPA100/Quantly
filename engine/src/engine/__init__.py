@@ -11,6 +11,7 @@ from ._engine import (
     covariance_matrix,
     hello,
     max_drawdown,
+    monte_carlo_var,
 )
 
 __all__ = [
@@ -19,4 +20,5 @@ __all__ = [
     "covariance_matrix",
     "hello",
     "max_drawdown",
+    "monte_carlo_var",
 ]

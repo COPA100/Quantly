@@ -7,6 +7,7 @@
 
 #include "correlation.hpp"
 #include "drawdown.hpp"
+#include "var.hpp"
 
 namespace py = pybind11;
 
@@ -56,6 +57,15 @@ py::array_t<double> covariance_matrix(DoubleArray data, int ddof) {
     return out;
 }
 
+py::dict monte_carlo_var(double mu, double sigma, int horizon, std::size_t n_sims,
+                         double confidence, unsigned long long seed) {
+    quantly::VaRResult r = quantly::monte_carlo_var(mu, sigma, horizon, n_sims, confidence, seed);
+    py::dict out;
+    out["var"] = r.var;
+    out["cvar"] = r.cvar;
+    return out;
+}
+
 // entry point for the `engine._engine` extension module. the compute lives in
 // pybind-free translation units; this file only wires them to python.
 PYBIND11_MODULE(_engine, m) {
@@ -68,4 +78,7 @@ PYBIND11_MODULE(_engine, m) {
           "pairwise Pearson correlation of the rows (assets x observations)");
     m.def("covariance_matrix", &covariance_matrix, py::arg("data"), py::arg("ddof") = 1,
           "pairwise sample covariance of the rows (assets x observations)");
+    m.def("monte_carlo_var", &monte_carlo_var, py::arg("mu"), py::arg("sigma"), py::arg("horizon"),
+          py::arg("n_sims"), py::arg("confidence") = 0.95, py::arg("seed") = 0,
+          "Monte Carlo value at risk and expected shortfall over a horizon");
 }

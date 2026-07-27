@@ -10,6 +10,7 @@ pybind11_add_module(_engine
   src/cpp/module.cpp
   src/cpp/drawdown.cpp
   src/cpp/correlation.cpp
+  src/cpp/var.cpp
 )
 target_include_directories(_engine PRIVATE src/cpp)
 
