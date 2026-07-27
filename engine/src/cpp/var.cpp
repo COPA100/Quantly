@@ -12,6 +12,17 @@ VaRResult monte_carlo_var(double mu, double sigma, int horizon, std::size_t n_si
         return {0.0, 0.0};
     }
 
+    if (sigma <= 0.0) {
+        // no volatility -> every path is the same deterministic compounding of
+        // mu, so var == cvar == that single loss (and the RNG below would assert)
+        double growth = 1.0;
+        for (int d = 0; d < horizon; ++d) {
+            growth *= (1.0 + mu);
+        }
+        double loss = -(growth - 1.0);
+        return {loss, loss};
+    }
+
     std::mt19937_64 rng(seed);
     std::normal_distribution<double> draw(mu, sigma);
 
