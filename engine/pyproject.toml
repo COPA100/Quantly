@@ -6,10 +6,28 @@ build-backend = "scikit_build_core.build"
 name = "quantly-engine"
 version = "0.1.0"
 description = "Quantly C++ analytics engine (pybind11) for the compute-heavy risk metrics"
+readme = "README.md"
 requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Colin Park", email = "colinpark100@gmail.com" }]
+keywords = ["finance", "risk", "pybind11", "monte-carlo", "var"]
+classifiers = [
+  "Programming Language :: C++",
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Topic :: Office/Business :: Financial :: Investment",
+]
+
+[project.urls]
+Repository = "https://github.com/COPA100/Quantly"
 
 [tool.scikit-build]
 # keep the cmake floor in one place
 cmake.version = ">=3.15"
 wheel.packages = ["src/engine"]
 build-dir = "build/{wheel_tag}"
+
+[tool.scikit-build.sdist]
+# ship everything needed to rebuild the extension from an sdist
+include = ["CMakeLists.txt", "pyproject.toml", "README.md", "src/"]
