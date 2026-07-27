@@ -1,0 +1,39 @@
+name: engine
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  engine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      # gcc ships on the runner; add the cmake/pybind11 build stack
+      - name: Install build tooling
+        run: pip install "scikit-build-core>=0.10" "pybind11>=2.12" "cmake>=3.29" "ninja>=1.11"
+
+      - name: C++ unit tests (Catch2)
+        working-directory: engine
+        run: |
+          cmake -S . -B build/tests -G Ninja -DQUANTLY_BUILD_TESTS=ON
+          cmake --build build/tests
+          ctest --test-dir build/tests --output-on-failure
+
+      - name: Build and install the engine wheel
+        run: pip install ./engine --no-build-isolation
+
+      - name: Install backend deps
+        run: pip install -r backend/requirements/dev.txt
+
+      # with the engine installed the pybind parity tests run instead of skipping
+      - name: pytest (engine present)
+        working-directory: backend
+        run: pytest
