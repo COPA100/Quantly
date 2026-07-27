@@ -1,0 +1,11 @@
+# cmake / scikit-build-core build trees
+build/
+_skbuild/
+dist/
+*.egg-info/
+
+# compiled extension artifacts
+*.pyd
+*.so
+*.o
+*.obj
