@@ -38,6 +38,7 @@ METRIC_NAMES = {
     "sortino",
     "drawdown",
     "beta",
+    "var",
     "correlation",
     "insights",
 }

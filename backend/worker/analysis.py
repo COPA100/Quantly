@@ -5,7 +5,7 @@ from typing import Any
 
 import numpy as np
 
-from common.analytics import basic, insights, metrics
+from common.analytics import accelerated, basic, insights, metrics
 from common.analytics.returns import daily_returns
 from common.csv_reader import parse_portfolio
 from common.market_data import ensure_benchmark, ensure_history, get_current_prices
@@ -44,6 +44,30 @@ def _weighted_returns(
     for ticker, r in series:
         aligned += weights.get(ticker, 0.0) * r[-n:]
     return aligned
+
+
+# monthly 95% VaR. fixed seed keeps the result deterministic so the analytics
+# cache (keyed by holdings+as-of) stays stable across re-runs.
+VAR_HORIZON_DAYS = 21
+VAR_SIMULATIONS = 20000
+VAR_CONFIDENCE = 0.95
+VAR_SEED = 0
+
+
+def _value_at_risk(portfolio_returns: np.ndarray) -> dict:
+    if portfolio_returns.size < 2:
+        return {
+            "horizon_days": VAR_HORIZON_DAYS,
+            "confidence": VAR_CONFIDENCE,
+            "var": 0.0,
+            "cvar": 0.0,
+        }
+    mu = float(np.mean(portfolio_returns))
+    sigma = float(np.std(portfolio_returns, ddof=1))
+    result = accelerated.monte_carlo_var(
+        mu, sigma, VAR_HORIZON_DAYS, VAR_SIMULATIONS, VAR_CONFIDENCE, VAR_SEED
+    )
+    return {"horizon_days": VAR_HORIZON_DAYS, "confidence": VAR_CONFIDENCE, **result}
 
 
 def _json_safe(value: Any) -> Any:
@@ -95,13 +119,16 @@ def compute_analytics(db, portfolio: Portfolio, as_of: date | None = None) -> di
     portfolio_returns = _weighted_returns(positions, returns_by_ticker, total)
     bench_returns = daily_returns(_adj_closes(ensure_benchmark(db, as_of=as_of)))
 
-    corr = metrics.correlation_matrix(returns_by_ticker)
+    # drawdown, the correlation kernel, and VaR run in the c++ engine when it is
+    # installed, and fall back to numpy otherwise
+    corr = accelerated.correlation_matrix(returns_by_ticker)
     avg_corr = metrics.average_correlation(corr["matrix"])
     vol = metrics.annualized_volatility(portfolio_returns)
     sharpe = metrics.sharpe_ratio(portfolio_returns)
     sortino = metrics.sortino_ratio(portfolio_returns)
-    drawdown = metrics.max_drawdown(portfolio_returns)
+    drawdown = accelerated.max_drawdown(portfolio_returns)
     beta = metrics.beta(portfolio_returns, bench_returns)
+    var = _value_at_risk(portfolio_returns)
 
     weights_sorted = sorted((p.get("pct_allocation", 0.0) for p in positions), reverse=True)
     top_n = min(3, len(weights_sorted))
@@ -117,6 +144,7 @@ def compute_analytics(db, portfolio: Portfolio, as_of: date | None = None) -> di
         "sortino": {"ratio": sortino},
         "drawdown": drawdown,
         "beta": {"beta": beta},
+        "var": var,
         "correlation": {"tickers": corr["tickers"], "matrix": corr["matrix"], "average": avg_corr},
         "insights": {
             "volatility": insights.volatility_insight(vol),
