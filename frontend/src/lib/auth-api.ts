@@ -19,3 +19,10 @@ export async function registerAndLogin(email: string, password: string): Promise
   await register(email, password)
   return login(email, password)
 }
+
+export function googleLogin(idToken: string): Promise<TokenPair> {
+  return apiFetch<TokenPair>('/auth/google', {
+    method: 'POST',
+    body: JSON.stringify({ id_token: idToken }),
+  })
+}

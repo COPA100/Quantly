@@ -1,6 +1,5 @@
 import { getAccessToken } from './auth'
-
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
+import { API_URL } from './config'
 
 export class ApiError extends Error {
   status: number

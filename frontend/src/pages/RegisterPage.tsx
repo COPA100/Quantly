@@ -3,6 +3,7 @@ import { type FormEvent, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import AuthLayout from '../components/AuthLayout'
 import Button from '../components/Button'
+import GoogleAuthSection from '../components/GoogleAuthSection'
 import TextField from '../components/TextField'
 import { errorMessage } from '../lib/api'
 import { setTokens } from '../lib/auth'
@@ -67,6 +68,7 @@ export default function RegisterPage() {
           {mutation.isPending ? 'Creating account…' : 'Create account'}
         </Button>
       </form>
+      <GoogleAuthSection />
     </AuthLayout>
   )
 }
