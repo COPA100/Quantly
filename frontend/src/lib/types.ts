@@ -23,3 +23,20 @@ export interface PortfolioAccepted {
   status: string
   job_id: number
 }
+
+export interface Job {
+  id: number
+  status: string
+  started_at: string | null
+  finished_at: string | null
+}
+
+export interface PortfolioStatusRead {
+  id: number
+  status: string
+  job: Job | null
+}
+
+export function isTerminalStatus(status: string): boolean {
+  return status === 'complete' || status === 'failed'
+}
