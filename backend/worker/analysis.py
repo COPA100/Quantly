@@ -46,6 +46,35 @@ def _weighted_returns(
     return aligned
 
 
+def _equity_curve(positions: list[dict], history_by_ticker: dict[str, list[Price]]) -> dict:
+    # portfolio market value over time = sum(shares * close), on the dates every
+    # holding has a price for. this is the series the frontend charts.
+    shares_by_ticker: dict[str, float] = {}
+    for p in positions:
+        symbol = str(p["symbol"]).upper()
+        shares_by_ticker[symbol] = shares_by_ticker.get(symbol, 0.0) + float(p["quantity"])
+
+    closes_by_ticker: dict[str, dict] = {}
+    date_sets: list[set] = []
+    for ticker, prices in history_by_ticker.items():
+        closes = {pr.date: pr.close for pr in prices if pr.close is not None}
+        if closes:
+            closes_by_ticker[ticker] = closes
+            date_sets.append(set(closes))
+    if not date_sets:
+        return {"dates": [], "values": []}
+
+    common = sorted(set.intersection(*date_sets))
+    dates = [d.isoformat() for d in common]
+    values = [
+        round(
+            sum(shares_by_ticker.get(t, 0.0) * closes_by_ticker[t][d] for t in closes_by_ticker), 2
+        )
+        for d in common
+    ]
+    return {"dates": dates, "values": values}
+
+
 # monthly 95% VaR. fixed seed keeps the result deterministic so the analytics
 # cache (keyed by holdings+as-of) stays stable across re-runs.
 VAR_HORIZON_DAYS = 21
@@ -112,8 +141,10 @@ def compute_analytics(db, portfolio: Portfolio, as_of: date | None = None) -> di
 
     # per-ticker daily returns from the shared price table
     returns_by_ticker: dict[str, np.ndarray] = {}
+    history_by_ticker: dict[str, list[Price]] = {}
     for ticker in dict.fromkeys(tickers):  # dedupe, preserve order
         history = ensure_history(db, ticker, as_of=as_of)
+        history_by_ticker[ticker] = history
         returns_by_ticker[ticker] = daily_returns(_adj_closes(history))
 
     portfolio_returns = _weighted_returns(positions, returns_by_ticker, total)
@@ -145,6 +176,7 @@ def compute_analytics(db, portfolio: Portfolio, as_of: date | None = None) -> di
         "drawdown": drawdown,
         "beta": {"beta": beta},
         "var": var,
+        "equity_curve": _equity_curve(positions, history_by_ticker),
         "correlation": {"tickers": corr["tickers"], "matrix": corr["matrix"], "average": avg_corr},
         "insights": {
             "volatility": insights.volatility_insight(vol),

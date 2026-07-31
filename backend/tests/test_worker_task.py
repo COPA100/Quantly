@@ -39,6 +39,7 @@ METRIC_NAMES = {
     "drawdown",
     "beta",
     "var",
+    "equity_curve",
     "correlation",
     "insights",
 }
