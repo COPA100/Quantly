@@ -1,7 +1,7 @@
+import { lazy, Suspense } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import AnalysisProgress from '../components/AnalysisProgress'
 import CorrelationHeatmap from '../components/CorrelationHeatmap'
-import EquityChart from '../components/EquityChart'
 import HoldingsTable from '../components/HoldingsTable'
 import PortfolioOverview from '../components/PortfolioOverview'
 import RiskInsights from '../components/RiskInsights'
@@ -11,6 +11,9 @@ import StatusBadge from '../components/StatusBadge'
 import { errorMessage } from '../lib/api'
 import { useAnalytics, usePortfolio, usePortfolioStatus } from '../lib/portfolio-hooks'
 import { isTerminalStatus } from '../lib/types'
+
+// the charting library is heavy; load it only when a detail page needs it
+const EquityChart = lazy(() => import('../components/EquityChart'))
 
 export default function PortfolioDetailPage() {
   const { id } = useParams()
@@ -58,10 +61,18 @@ export default function PortfolioDetailPage() {
           {analytics.data.equity_curve && analytics.data.equity_curve.dates.length > 1 && (
             <Section title="Performance">
               <div className="rounded-xl border border-slate-200 bg-white p-4">
-                <EquityChart
-                  dates={analytics.data.equity_curve.dates}
-                  values={analytics.data.equity_curve.values}
-                />
+                <Suspense
+                  fallback={
+                    <div className="flex h-[280px] items-center justify-center">
+                      <Spinner />
+                    </div>
+                  }
+                >
+                  <EquityChart
+                    dates={analytics.data.equity_curve.dates}
+                    values={analytics.data.equity_curve.values}
+                  />
+                </Suspense>
               </div>
             </Section>
           )}
