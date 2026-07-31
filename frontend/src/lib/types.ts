@@ -77,6 +77,7 @@ export interface Analytics {
   drawdown?: { max_drawdown: number; duration: number }
   beta?: { beta: number }
   var?: { horizon_days: number; confidence: number; var: number; cvar: number }
+  equity_curve?: { dates: string[]; values: number[] }
   correlation?: Correlation
   insights?: Record<string, string>
 }

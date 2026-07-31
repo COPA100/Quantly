@@ -1,5 +1,6 @@
 import { Link, useParams } from 'react-router-dom'
 import AnalysisProgress from '../components/AnalysisProgress'
+import EquityChart from '../components/EquityChart'
 import HoldingsTable from '../components/HoldingsTable'
 import PortfolioOverview from '../components/PortfolioOverview'
 import RiskInsights from '../components/RiskInsights'
@@ -53,6 +54,16 @@ export default function PortfolioDetailPage() {
       {complete && analytics.data && (
         <>
           <PortfolioOverview analytics={analytics.data} />
+          {analytics.data.equity_curve && analytics.data.equity_curve.dates.length > 1 && (
+            <Section title="Performance">
+              <div className="rounded-xl border border-slate-200 bg-white p-4">
+                <EquityChart
+                  dates={analytics.data.equity_curve.dates}
+                  values={analytics.data.equity_curve.values}
+                />
+              </div>
+            </Section>
+          )}
           <RiskInsights analytics={analytics.data} />
         </>
       )}
