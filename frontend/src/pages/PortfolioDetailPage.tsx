@@ -1,5 +1,6 @@
 import { Link, useParams } from 'react-router-dom'
 import AnalysisProgress from '../components/AnalysisProgress'
+import CorrelationHeatmap from '../components/CorrelationHeatmap'
 import EquityChart from '../components/EquityChart'
 import HoldingsTable from '../components/HoldingsTable'
 import PortfolioOverview from '../components/PortfolioOverview'
@@ -65,6 +66,16 @@ export default function PortfolioDetailPage() {
             </Section>
           )}
           <RiskInsights analytics={analytics.data} />
+          {analytics.data.correlation && analytics.data.correlation.tickers.length >= 2 && (
+            <Section title="Correlation">
+              {analytics.data.insights?.correlation && (
+                <p className="mb-3 text-sm text-slate-600">
+                  {analytics.data.insights.correlation}
+                </p>
+              )}
+              <CorrelationHeatmap correlation={analytics.data.correlation} />
+            </Section>
+          )}
         </>
       )}
 
