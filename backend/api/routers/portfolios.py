@@ -1,7 +1,7 @@
 import io
 from collections.abc import Callable
 from decimal import Decimal
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from sqlalchemy import select
@@ -17,7 +17,7 @@ from api.schemas.portfolio import (
 from common.config import get_settings
 from common.csv_reader import CSVValidationError, parse_portfolio
 from common.db import get_db
-from common.models import Holding, Job, Portfolio, PortfolioStatus, User
+from common.models import AnalyticsResult, Holding, Job, Portfolio, PortfolioStatus, User
 from common.storage import Storage, get_storage
 
 router = APIRouter(prefix="/portfolios", tags=["portfolios"])
@@ -121,3 +121,22 @@ def get_portfolio_status(
         select(Job).where(Job.portfolio_id == portfolio_id).order_by(Job.id.desc())
     )
     return PortfolioStatusRead(id=portfolio.id, status=portfolio.status, job=latest_job)
+
+
+@router.get("/{portfolio_id}/analytics")
+def get_portfolio_analytics(
+    portfolio_id: int,
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[User, Depends(get_current_user)],
+) -> dict[str, Any]:
+    # metric_name -> metric_value blob, empty until the worker finishes
+    portfolio = db.scalar(
+        select(Portfolio).where(Portfolio.id == portfolio_id, Portfolio.user_id == user.id)
+    )
+    if portfolio is None:
+        raise HTTPException(status_code=404, detail="portfolio not found")
+
+    rows = db.scalars(
+        select(AnalyticsResult).where(AnalyticsResult.portfolio_id == portfolio_id)
+    ).all()
+    return {row.metric_name: row.metric_value for row in rows}

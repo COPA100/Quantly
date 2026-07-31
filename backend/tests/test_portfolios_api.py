@@ -129,6 +129,30 @@ def test_status_of_other_users_portfolio_is_404(client):
     assert http.get(f"/portfolios/{pid}/status", headers=bob).status_code == 404
 
 
+def test_analytics_empty_before_completion(client):
+    http, _ = client
+    headers = auth_headers(http)
+    created = http.post(
+        "/portfolios", files={"file": ("p.csv", VALID_CSV, "text/csv")}, headers=headers
+    )
+    pid = created.json()["id"]
+    resp = http.get(f"/portfolios/{pid}/analytics", headers=headers)
+    assert resp.status_code == 200
+    # nothing computed yet (the worker is not run in this test)
+    assert resp.json() == {}
+
+
+def test_analytics_of_other_users_portfolio_is_404(client):
+    http, _ = client
+    alice = auth_headers(http, email="alice@example.com")
+    bob = auth_headers(http, email="bob@example.com")
+    created = http.post(
+        "/portfolios", files={"file": ("p.csv", VALID_CSV, "text/csv")}, headers=alice
+    )
+    pid = created.json()["id"]
+    assert http.get(f"/portfolios/{pid}/analytics", headers=bob).status_code == 404
+
+
 def test_malformed_upload_returns_422(client):
     http, _ = client
     headers = auth_headers(http)
