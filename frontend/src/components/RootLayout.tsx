@@ -1,5 +1,8 @@
-import { Link, Outlet, useNavigate } from 'react-router-dom'
+import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/auth-context'
+
+const navLinkClass = ({ isActive }: { isActive: boolean }) =>
+  `text-sm font-medium transition ${isActive ? 'text-slate-900' : 'text-slate-500 hover:text-slate-900'}`
 
 export default function RootLayout() {
   const { logout } = useAuth()
@@ -14,9 +17,19 @@ export default function RootLayout() {
     <div className="min-h-screen">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-          <Link to="/" className="text-lg font-semibold tracking-tight text-slate-900">
-            Quantly
-          </Link>
+          <div className="flex items-center gap-6">
+            <Link to="/" className="text-lg font-semibold tracking-tight text-slate-900">
+              Quantly
+            </Link>
+            <nav className="flex items-center gap-4">
+              <NavLink to="/" end className={navLinkClass}>
+                Portfolios
+              </NavLink>
+              <NavLink to="/upload" className={navLinkClass}>
+                Upload
+              </NavLink>
+            </nav>
+          </div>
           <button
             type="button"
             onClick={handleLogout}
