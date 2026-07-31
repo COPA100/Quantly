@@ -1,9 +1,9 @@
 import { createBrowserRouter } from 'react-router-dom'
 import ProtectedRoute from './components/ProtectedRoute'
 import RootLayout from './components/RootLayout'
-import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
 import NotFoundPage from './pages/NotFoundPage'
+import PortfoliosPage from './pages/PortfoliosPage'
 import RegisterPage from './pages/RegisterPage'
 import UploadPage from './pages/UploadPage'
 
@@ -17,7 +17,7 @@ export const router = createBrowserRouter([
         path: '/',
         element: <RootLayout />,
         children: [
-          { index: true, element: <HomePage /> },
+          { index: true, element: <PortfoliosPage /> },
           { path: 'upload', element: <UploadPage /> },
           { path: '*', element: <NotFoundPage /> },
         ],
