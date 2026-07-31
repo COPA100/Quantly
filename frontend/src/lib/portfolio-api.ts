@@ -1,5 +1,11 @@
 import { apiFetch } from './api'
-import type { Portfolio, PortfolioAccepted, PortfolioStatusRead } from './types'
+import type {
+  Analytics,
+  Portfolio,
+  PortfolioAccepted,
+  PortfolioDetail,
+  PortfolioStatusRead,
+} from './types'
 
 export function uploadPortfolio(file: File): Promise<PortfolioAccepted> {
   const form = new FormData()
@@ -13,4 +19,12 @@ export function listPortfolios(): Promise<Portfolio[]> {
 
 export function getPortfolioStatus(id: number): Promise<PortfolioStatusRead> {
   return apiFetch<PortfolioStatusRead>(`/portfolios/${id}/status`)
+}
+
+export function getPortfolio(id: number): Promise<PortfolioDetail> {
+  return apiFetch<PortfolioDetail>(`/portfolios/${id}`)
+}
+
+export function getAnalytics(id: number): Promise<Analytics> {
+  return apiFetch<Analytics>(`/portfolios/${id}/analytics`)
 }
