@@ -2,6 +2,7 @@ import { Link, useParams } from 'react-router-dom'
 import AnalysisProgress from '../components/AnalysisProgress'
 import HoldingsTable from '../components/HoldingsTable'
 import PortfolioOverview from '../components/PortfolioOverview'
+import RiskInsights from '../components/RiskInsights'
 import Section from '../components/Section'
 import Spinner from '../components/Spinner'
 import StatusBadge from '../components/StatusBadge'
@@ -49,7 +50,12 @@ export default function PortfolioDetailPage() {
           Loading analytics…
         </div>
       )}
-      {complete && analytics.data && <PortfolioOverview analytics={analytics.data} />}
+      {complete && analytics.data && (
+        <>
+          <PortfolioOverview analytics={analytics.data} />
+          <RiskInsights analytics={analytics.data} />
+        </>
+      )}
 
       {complete && (
         <Section title="Holdings">
