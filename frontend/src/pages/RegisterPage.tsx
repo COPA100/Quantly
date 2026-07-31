@@ -6,18 +6,19 @@ import Button from '../components/Button'
 import GoogleAuthSection from '../components/GoogleAuthSection'
 import TextField from '../components/TextField'
 import { errorMessage } from '../lib/api'
-import { setTokens } from '../lib/auth'
+import { useAuth } from '../lib/auth-context'
 import { registerAndLogin } from '../lib/auth-api'
 
 export default function RegisterPage() {
   const navigate = useNavigate()
+  const auth = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
 
   const mutation = useMutation({
     mutationFn: () => registerAndLogin(email, password),
     onSuccess: (tokens) => {
-      setTokens(tokens)
+      auth.login(tokens)
       navigate('/')
     },
   })
