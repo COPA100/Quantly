@@ -50,6 +50,14 @@ output "worker_service_name" {
   value = module.worker.service_name
 }
 
+output "log_group_names" {
+  description = "tail with `aws logs tail <name> --follow`"
+  value = {
+    api    = module.api.log_group_name
+    worker = module.worker.log_group_name
+  }
+}
+
 output "api_task_definition_arn" {
   description = "used to run one-off tasks like `alembic upgrade head`"
   value       = module.api.task_definition_arn

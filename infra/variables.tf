@@ -94,6 +94,12 @@ variable "worker_capacity_provider" {
   default     = "FARGATE_SPOT"
 }
 
+variable "log_retention_days" {
+  description = "days to keep api and worker container logs in cloudwatch"
+  type        = number
+  default     = 14
+}
+
 variable "certificate_arn" {
   description = "acm certificate for the alb. when set, the api is served over https and http redirects to it"
   type        = string

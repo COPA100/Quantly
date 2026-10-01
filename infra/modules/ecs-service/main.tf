@@ -14,6 +14,15 @@ locals {
       portMappings = var.container_port == null ? [] : [
         { containerPort = var.container_port, protocol = "tcp" }
       ]
+
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          "awslogs-group"         = aws_cloudwatch_log_group.this.name
+          "awslogs-region"        = var.aws_region
+          "awslogs-stream-prefix" = "ecs"
+        }
+      }
     },
     # only override the image's CMD when asked to
     var.command == null ? {} : { command = var.command },
@@ -79,6 +88,7 @@ resource "aws_ecs_service" "this" {
   # tasks fail to start if they launch before their permissions exist
   depends_on = [
     aws_iam_role_policy.execution,
+    aws_iam_role_policy.execution_logs,
     aws_iam_role_policy.task,
   ]
 

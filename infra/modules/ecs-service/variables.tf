@@ -82,6 +82,17 @@ variable "secrets" {
   default     = {}
 }
 
+variable "aws_region" {
+  description = "region the service's log group lives in"
+  type        = string
+}
+
+variable "log_retention_days" {
+  description = "days to keep container logs"
+  type        = number
+  default     = 14
+}
+
 variable "ecr_repository_arn" {
   description = "the one repository this service is allowed to pull its image from"
   type        = string
