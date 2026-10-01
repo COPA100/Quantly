@@ -82,6 +82,16 @@ variable "secrets" {
   default     = {}
 }
 
+variable "ecr_repository_arn" {
+  description = "the one repository this service is allowed to pull its image from"
+  type        = string
+}
+
+variable "task_policy_json" {
+  description = "iam policy for the task role: what the application itself may call"
+  type        = string
+}
+
 variable "load_balancer" {
   description = "register tasks with this target group, null for no load balancer"
   type = object({

@@ -27,6 +27,9 @@ resource "aws_ecs_task_definition" "this" {
   cpu                      = var.cpu
   memory                   = var.memory
 
+  execution_role_arn = aws_iam_role.execution.arn
+  task_role_arn      = aws_iam_role.task.arn
+
   runtime_platform {
     operating_system_family = "LINUX"
     cpu_architecture        = var.cpu_architecture
@@ -72,6 +75,12 @@ resource "aws_ecs_service" "this" {
 
   # give the app time to boot before failed health checks kill the task
   health_check_grace_period_seconds = var.load_balancer == null ? null : 60
+
+  # tasks fail to start if they launch before their permissions exist
+  depends_on = [
+    aws_iam_role_policy.execution,
+    aws_iam_role_policy.task,
+  ]
 
   lifecycle {
     precondition {

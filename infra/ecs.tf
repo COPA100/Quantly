@@ -81,6 +81,9 @@ module "api" {
     QUANTLY_JWT_SECRET   = aws_ssm_parameter.jwt_secret.arn
   }
 
+  ecr_repository_arn = module.ecr.repository_arns["api"]
+  task_policy_json   = local.api_task_policy
+
   load_balancer = {
     target_group_arn = aws_lb_target_group.api.arn
   }
@@ -114,6 +117,9 @@ module "worker" {
   secrets = {
     QUANTLY_DATABASE_URL = aws_ssm_parameter.database_url.arn
   }
+
+  ecr_repository_arn = module.ecr.repository_arns["worker"]
+  task_policy_json   = local.worker_task_policy
 
   depends_on = [aws_ecs_cluster_capacity_providers.this]
 }
