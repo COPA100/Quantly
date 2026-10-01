@@ -15,3 +15,7 @@ output "public_subnet_ids" {
 output "s3_bucket" {
   value = module.s3.bucket_name
 }
+
+output "rds_address" {
+  value = module.rds.address
+}

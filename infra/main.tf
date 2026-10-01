@@ -6,6 +6,10 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 6.0"
     }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.6"
+    }
   }
 }
 
@@ -42,4 +46,13 @@ module "s3" {
   # bucket names are global, the account id keeps this one unique
   bucket_name       = "${local.name}-portfolios-${data.aws_caller_identity.current.account_id}"
   expire_after_days = var.csv_expire_after_days
+}
+
+module "rds" {
+  source = "./modules/rds"
+
+  name               = local.name
+  subnet_ids         = module.network.public_subnet_ids
+  security_group_ids = [module.network.rds_security_group_id]
+  instance_class     = var.db_instance_class
 }

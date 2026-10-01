@@ -33,3 +33,9 @@ variable "csv_expire_after_days" {
   type        = number
   default     = 90
 }
+
+variable "db_instance_class" {
+  description = "rds instance class"
+  type        = string
+  default     = "db.t4g.micro"
+}
