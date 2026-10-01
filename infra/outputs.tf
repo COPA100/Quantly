@@ -23,3 +23,8 @@ output "rds_address" {
 output "redis_address" {
   value = module.redis.address
 }
+
+output "ecr_repository_urls" {
+  description = "where to push the api and worker images"
+  value       = module.ecr.repository_urls
+}

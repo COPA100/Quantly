@@ -65,3 +65,10 @@ module "redis" {
   security_group_ids = [module.network.redis_security_group_id]
   node_type          = var.redis_node_type
 }
+
+module "ecr" {
+  source = "./modules/ecr"
+
+  name         = local.name
+  repositories = ["api", "worker"]
+}
