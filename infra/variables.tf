@@ -45,3 +45,63 @@ variable "redis_node_type" {
   type        = string
   default     = "cache.t4g.micro"
 }
+
+variable "image_tag" {
+  description = "tag of the api and worker images to deploy"
+  type        = string
+  default     = "latest"
+}
+
+variable "api_cpu" {
+  description = "api task cpu units (256 = 0.25 vcpu)"
+  type        = number
+  default     = 256
+}
+
+variable "api_memory" {
+  description = "api task memory in mib"
+  type        = number
+  default     = 512
+}
+
+variable "api_desired_count" {
+  description = "number of api tasks"
+  type        = number
+  default     = 1
+}
+
+variable "worker_cpu" {
+  description = "worker task cpu units, larger than the api since it runs the analytics engine"
+  type        = number
+  default     = 1024
+}
+
+variable "worker_memory" {
+  description = "worker task memory in mib"
+  type        = number
+  default     = 2048
+}
+
+variable "worker_desired_count" {
+  description = "number of worker tasks"
+  type        = number
+  default     = 1
+}
+
+variable "worker_capacity_provider" {
+  description = "FARGATE or FARGATE_SPOT for the worker"
+  type        = string
+  default     = "FARGATE_SPOT"
+}
+
+variable "cors_origins" {
+  description = "origins the api accepts browser requests from (the frontend's url)"
+  type        = list(string)
+  default     = ["http://localhost:5173"]
+}
+
+variable "google_client_id" {
+  description = "google oauth client id, empty disables google sign-in"
+  type        = string
+  default     = ""
+}

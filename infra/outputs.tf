@@ -28,3 +28,25 @@ output "ecr_repository_urls" {
   description = "where to push the api and worker images"
   value       = module.ecr.repository_urls
 }
+
+output "ecs_cluster_name" {
+  value = aws_ecs_cluster.this.name
+}
+
+output "api_service_name" {
+  value = module.api.service_name
+}
+
+output "worker_service_name" {
+  value = module.worker.service_name
+}
+
+output "api_task_definition_arn" {
+  description = "used to run one-off tasks like `alembic upgrade head`"
+  value       = module.api.task_definition_arn
+}
+
+output "api_security_group_id" {
+  description = "security group for one-off api tasks, the only path into rds"
+  value       = module.network.api_security_group_id
+}
