@@ -81,7 +81,16 @@ module "api" {
     QUANTLY_JWT_SECRET   = aws_ssm_parameter.jwt_secret.arn
   }
 
-  depends_on = [aws_ecs_cluster_capacity_providers.this]
+  load_balancer = {
+    target_group_arn = aws_lb_target_group.api.arn
+  }
+
+  # the target group has to be attached to a listener before a service can use it
+  depends_on = [
+    aws_ecs_cluster_capacity_providers.this,
+    aws_lb_listener.http,
+    aws_lb_listener.https,
+  ]
 }
 
 # ---- worker: bigger, cpu-bound, interruptible, so it runs on spot ----

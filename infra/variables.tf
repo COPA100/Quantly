@@ -94,6 +94,12 @@ variable "worker_capacity_provider" {
   default     = "FARGATE_SPOT"
 }
 
+variable "certificate_arn" {
+  description = "acm certificate for the alb. when set, the api is served over https and http redirects to it"
+  type        = string
+  default     = null
+}
+
 variable "cors_origins" {
   description = "origins the api accepts browser requests from (the frontend's url)"
   type        = list(string)

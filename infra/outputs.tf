@@ -29,6 +29,15 @@ output "ecr_repository_urls" {
   value       = module.ecr.repository_urls
 }
 
+output "alb_dns_name" {
+  value = aws_lb.api.dns_name
+}
+
+output "api_url" {
+  description = "base url of the api (point a cname at the alb when using a certificate)"
+  value       = "${local.tls_enabled ? "https" : "http"}://${aws_lb.api.dns_name}"
+}
+
 output "ecs_cluster_name" {
   value = aws_ecs_cluster.this.name
 }
