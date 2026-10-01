@@ -27,3 +27,9 @@ variable "api_port" {
   type        = number
   default     = 8000
 }
+
+variable "csv_expire_after_days" {
+  description = "days before a raw csv upload is deleted from s3"
+  type        = number
+  default     = 90
+}

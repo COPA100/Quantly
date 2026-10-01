@@ -11,3 +11,7 @@ output "public_subnet_ids" {
   description = "handy for one-off `aws ecs run-task` calls (migrations, seeding)"
   value       = module.network.public_subnet_ids
 }
+
+output "s3_bucket" {
+  value = module.s3.bucket_name
+}

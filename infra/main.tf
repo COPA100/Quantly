@@ -21,6 +21,8 @@ provider "aws" {
   }
 }
 
+data "aws_caller_identity" "current" {}
+
 locals {
   # prefix for every resource name, e.g. quantly-dev
   name = "${var.project}-${var.environment}"
@@ -32,4 +34,12 @@ module "network" {
   name     = local.name
   vpc_cidr = var.vpc_cidr
   api_port = var.api_port
+}
+
+module "s3" {
+  source = "./modules/s3"
+
+  # bucket names are global, the account id keeps this one unique
+  bucket_name       = "${local.name}-portfolios-${data.aws_caller_identity.current.account_id}"
+  expire_after_days = var.csv_expire_after_days
 }
