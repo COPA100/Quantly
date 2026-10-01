@@ -15,3 +15,15 @@ variable "aws_region" {
   type        = string
   default     = "us-east-1"
 }
+
+variable "vpc_cidr" {
+  description = "cidr block for the vpc"
+  type        = string
+  default     = "10.0.0.0/16"
+}
+
+variable "api_port" {
+  description = "port the api container listens on"
+  type        = number
+  default     = 8000
+}
