@@ -39,3 +39,9 @@ variable "db_instance_class" {
   type        = string
   default     = "db.t4g.micro"
 }
+
+variable "redis_node_type" {
+  description = "elasticache node type"
+  type        = string
+  default     = "cache.t4g.micro"
+}

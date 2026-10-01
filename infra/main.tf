@@ -56,3 +56,12 @@ module "rds" {
   security_group_ids = [module.network.rds_security_group_id]
   instance_class     = var.db_instance_class
 }
+
+module "redis" {
+  source = "./modules/redis"
+
+  name               = local.name
+  subnet_ids         = module.network.public_subnet_ids
+  security_group_ids = [module.network.redis_security_group_id]
+  node_type          = var.redis_node_type
+}

@@ -19,3 +19,7 @@ output "s3_bucket" {
 output "rds_address" {
   value = module.rds.address
 }
+
+output "redis_address" {
+  value = module.redis.address
+}
