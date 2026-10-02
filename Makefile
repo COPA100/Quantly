@@ -1,4 +1,4 @@
-.PHONY: install dev test format lint up down engine engine-wheel
+.PHONY: install dev test format lint up down seed engine engine-wheel
 
 install:  ## Install backend dev dependencies
 	pip install -r backend/requirements/dev.txt
@@ -26,3 +26,6 @@ up:  ## Start local services (postgres + redis)
 
 down:  ## Stop local services
 	docker compose down
+
+seed:  ## Create the demo account and an analyzed sample portfolio (API_URL=... for a deployed stack)
+	cd backend && python -m scripts.seed --api-url $(or $(API_URL),http://localhost:8000)
