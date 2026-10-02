@@ -1,0 +1,101 @@
+name: terraform plan
+
+on:
+  pull_request:
+    paths:
+      - "infra/**"
+      - ".github/workflows/terraform-plan.yml"
+
+permissions:
+  id-token: write # oidc token, exchanged for short-lived aws credentials
+  contents: read
+  pull-requests: write # the plan is posted back as a pr comment
+
+env:
+  TF_VERSION: "1.13.0"
+  TF_IN_AUTOMATION: "true"
+  AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+  ENVIRONMENT: dev
+
+jobs:
+  # needs no aws access, so it runs on every pr including ones from forks
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: terraform fmt
+        run: terraform fmt -check -recursive infra
+
+      - name: terraform validate
+        run: |
+          for root in infra infra/budget infra/ci; do
+            terraform -chdir="$root" init -backend=false -input=false
+            terraform -chdir="$root" validate
+          done
+
+  plan:
+    needs: validate
+    # skipped until the repo is wired to an aws account, and for fork prs,
+    # which github does not hand an oidc token
+    if: vars.AWS_PLAN_ROLE_ARN != '' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          # the wrapper swallows exit codes, and the plan step branches on them
+          terraform_wrapper: false
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: ${{ vars.AWS_PLAN_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: terraform init
+        run: |
+          terraform init -input=false \
+            -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
+            -backend-config="key=$ENVIRONMENT.tfstate" \
+            -backend-config="region=$AWS_REGION"
+
+      # read only: the plan role cannot write, so the state is not locked.
+      # exit code 0 is no changes, 2 is changes, 1 is a real failure.
+      - name: terraform plan
+        id: plan
+        run: |
+          set +e
+          terraform plan -input=false -no-color -lock=false -detailed-exitcode \
+            -var-file="environments/$ENVIRONMENT.tfvars" > plan.txt 2>&1
+          code=$?
+          set -e
+          cat plan.txt
+          echo "exitcode=$code" >> "$GITHUB_OUTPUT"
+          if [ "$code" -eq 1 ]; then exit 1; fi
+
+      - name: Post plan to the pull request
+        if: always() && steps.plan.outputs.exitcode != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo "### terraform plan ($ENVIRONMENT)"
+            echo
+            echo '```'
+            # github caps comments at 65536 characters, keep the tail with the summary line
+            tail -c 60000 plan.txt
+            echo '```'
+          } > comment.md
+          cat comment.md >> "$GITHUB_STEP_SUMMARY"
+          gh pr comment "${{ github.event.pull_request.number }}" \
+            --body-file comment.md --edit-last --create-if-none

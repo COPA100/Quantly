@@ -1,5 +1,11 @@
 terraform {
-  required_version = ">= 1.9"
+  required_version = ">= 1.10"
+
+  # remote state, so ci and a laptop work against the same stack. the bucket
+  # (created in ./ci), key and region are passed at init, see the readme.
+  backend "s3" {
+    use_lockfile = true
+  }
 
   required_providers {
     aws = {
