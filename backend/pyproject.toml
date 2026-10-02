@@ -1,7 +1,7 @@
 [tool.ruff]
 line-length = 100
 target-version = "py313"
-src = ["api", "common"]
+src = ["api", "common", "worker", "scripts"]
 
 [tool.ruff.lint]
 # pycodestyle errors/warnings, pyflakes, bugbear, pyupgrade.
@@ -15,7 +15,7 @@ target-version = ["py313"]
 [tool.isort]
 profile = "black"
 line_length = 100
-known_first_party = ["api", "common"]
+known_first_party = ["api", "common", "worker", "scripts"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
