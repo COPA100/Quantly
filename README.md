@@ -10,6 +10,10 @@ It is also a deliberate exercise in production system design. The API and the co
 
 ## Screenshots
 
+Sign in, upload a brokerage export, and read the results:
+
+![Demo: signing in, uploading a CSV, and scrolling through the analyzed portfolio](./docs/screenshots/demo.gif)
+
 The sample portfolio in [`example_csv/ex2.csv`](./example_csv/ex2.csv), analyzed against five years of real price history. ([Full page](./docs/screenshots/portfolio-detail.png).)
 
 ![Portfolio overview: total value, gain/loss, allocation and the equity curve](./docs/screenshots/overview.png)
@@ -128,7 +132,7 @@ example_csv/    sample brokerage exports to upload
 Everything runs locally for free. You need Docker, Python 3.13+ and a current Node LTS.
 
 ```bash
-# postgres, redis, minio (a local stand-in for s3) and the celery worker
+# postgres, redis, s3mock (a local stand-in for s3) and the celery worker
 docker compose up -d
 
 # api
@@ -157,7 +161,7 @@ cd backend
 python -m scripts.seed             # prints the demo login when it is done
 ```
 
-The C++ engine is optional. Without it the worker uses the NumPy implementations. To build and install it into the current environment (needs a C++ compiler and CMake):
+The worker container compiles the C++ engine into its image. Outside the container the engine is optional, and without it the same code uses the NumPy implementations. To build and install it into the current environment (needs a C++ compiler and CMake):
 
 ```bash
 pip install ./engine
@@ -237,7 +241,6 @@ The full path works end to end: auth, upload, async analysis, the insight layer,
 
 Known gaps:
 
-- The worker container image does not bundle the C++ engine yet, so containers run the NumPy fallback. The engine is built and tested in CI and can be installed locally.
 - Job status is polled. There is no WebSocket or SSE push.
 
 ## Motivation
