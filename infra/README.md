@@ -148,6 +148,14 @@ curl "$API_URL/health"      # {"status":"ok"}
 curl "$API_URL/health/db"   # {"status":"ok"} once the api can reach rds
 ```
 
+The database is empty after every stand-up. To create a demo account with an analyzed portfolio (it goes through the api, so it needs no access to RDS):
+
+```bash
+cd ../backend
+python -m scripts.seed --api-url "$API_URL"
+cd ../infra
+```
+
 To point the local frontend at it:
 
 ```bash
