@@ -1,12 +1,17 @@
 name: images
 
 on:
-  push:
-    branches: [main]
   pull_request:
     paths:
       - "backend/**"
       - ".github/workflows/images.yml"
+  # deploy.yml calls this once the ecr repositories exist
+  workflow_call:
+    inputs:
+      push:
+        description: push the built images to ecr
+        type: boolean
+        default: false
 
 permissions:
   id-token: write # oidc token, exchanged for short-lived aws credentials
@@ -29,9 +34,9 @@ jobs:
           - service: worker
             dockerfile: backend/Dockerfile.worker
     env:
-      # prs only prove the images build. pushing needs main plus the demo switch,
-      # since the ecr repos only exist while the stack is up.
-      PUSH: ${{ github.event_name == 'push' && vars.DEPLOY_ENABLED == 'true' }}
+      # prs only prove the images build. pushing happens from the deploy
+      # workflow, since the ecr repos only exist while the stack is up.
+      PUSH: ${{ inputs.push == true }}
     steps:
       - uses: actions/checkout@v5
 

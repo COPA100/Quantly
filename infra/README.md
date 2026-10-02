@@ -166,6 +166,8 @@ aws logs tail "$(terraform output -json log_group_names | jq -r .worker)" --foll
 
 ### 8. Tear it down
 
+If CI deploys are on, set the `DEPLOY_ENABLED` repo variable back to `false` first, or the next push to `main` rebuilds the stack.
+
 ```bash
 terraform destroy -var-file=environments/dev.tfvars
 ```
@@ -180,7 +182,7 @@ terraform state list   # should print nothing
 
 ## Deploying a new image
 
-Push a new tag (step 3 with a different tag), then:
+With [CI/CD](#cicd) wired up, pushing to `main` does this for you. By hand: push a new tag (step 3 with a different tag), then:
 
 ```bash
 terraform apply -var-file=environments/dev.tfvars -var image_tag=<tag>
@@ -209,10 +211,23 @@ Wire the repo up once, under Settings > Secrets and variables > Actions > Variab
 | `AWS_PLAN_ROLE_ARN` | `terraform -chdir=ci output -raw plan_role_arn` |
 | `AWS_DEPLOY_ROLE_ARN` | `terraform -chdir=ci output -raw deploy_role_arn` |
 | `TF_STATE_BUCKET` | `terraform -chdir=ci output -raw state_bucket` |
+| `DEPLOY_ENABLED` | `true` only while a demo stack should exist, see below |
 
 Until those are set, the AWS jobs skip themselves and everything else in CI still runs.
 
 **On a pull request** that touches `infra/`, [`terraform-plan.yml`](../.github/workflows/terraform-plan.yml) checks formatting, validates all three roots, then runs `terraform plan` against the real state and posts the result as a PR comment. When the stack is torn down the plan simply shows everything as to-be-created.
+
+**On a push to `main`**, [`deploy.yml`](../.github/workflows/deploy.yml) does the whole runbook below (steps 2 to 6) by itself:
+
+1. creates the ECR repositories if they are missing
+2. builds the api and worker images and pushes them tagged with the commit sha
+3. `terraform apply -var image_tag=<sha>`, which rolls both services onto the new images
+4. runs `alembic upgrade head` as a one-off task
+5. waits for both services to settle, then hits `/health` and `/health/db`
+
+It only runs while the repo variable `DEPLOY_ENABLED` is `true`. That variable is the demo switch: the stack bills by the hour, so a push should not quietly rebuild it after a teardown. Turn it on for a demo window (the first push, or a manual run from the Actions tab, then stands the whole stack up), and turn it off again **before** `terraform destroy`.
+
+Pull requests also build both images without pushing them ([`images.yml`](../.github/workflows/images.yml)), so a broken Dockerfile is caught before it reaches `main`.
 
 ## Useful variables
 
