@@ -8,6 +8,20 @@ Quantly turns a CSV of your stock holdings into the analytics your brokerage scr
 
 It is also a deliberate exercise in production system design. The API and the compute are separate services that scale independently, analysis runs asynchronously off a queue, the path-dependent risk math is written in C++ and benchmarked against NumPy, and the whole AWS stack is Terraform that gets stood up for a demo and torn down afterwards.
 
+## Screenshots
+
+The sample portfolio in [`example_csv/ex2.csv`](./example_csv/ex2.csv), analyzed against five years of real price history. ([Full page](./docs/screenshots/portfolio-detail.png).)
+
+![Portfolio overview: total value, gain/loss, allocation and the equity curve](./docs/screenshots/overview.png)
+
+Every risk metric comes with what it means, not just the number:
+
+![Risk insight cards: volatility, Sharpe, Sortino, max drawdown, beta and value at risk](./docs/screenshots/risk.png)
+
+The correlation heatmap answers "am I actually diversified?" at a glance:
+
+![Correlation matrix heatmap across the 13 holdings](./docs/screenshots/correlation.png)
+
 ## What it does
 
 Beyond current value and gain/loss, Quantly surfaces risk and diversification insights. Each one is paired with a plain-English interpretation, not just a number:
