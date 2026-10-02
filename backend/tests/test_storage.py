@@ -20,7 +20,7 @@ def test_download_bytes_reads_the_body():
     client.get_object.assert_called_once_with(Bucket="mybucket", Key="k/1.csv")
 
 
-def test_build_client_passes_minio_endpoint_and_keys(monkeypatch):
+def test_build_client_passes_local_endpoint_and_keys(monkeypatch):
     captured = {}
     monkeypatch.setattr(
         "common.storage.boto3.client",

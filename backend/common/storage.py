@@ -22,10 +22,10 @@ class Storage:
 
 def _build_client(settings: Settings):
     kwargs: dict = {"region_name": settings.s3_region}
-    # endpoint url is set for minio locally, left empty for real aws
+    # endpoint url is set for the local s3 stand-in, left empty for real aws
     if settings.s3_endpoint_url:
         kwargs["endpoint_url"] = settings.s3_endpoint_url
-    # explicit keys for minio, otherwise boto3 falls back to the iam role
+    # explicit keys locally, otherwise boto3 falls back to the iam role
     if settings.aws_access_key_id:
         kwargs["aws_access_key_id"] = settings.aws_access_key_id
         kwargs["aws_secret_access_key"] = settings.aws_secret_access_key

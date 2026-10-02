@@ -27,24 +27,29 @@ services:
       timeout: 5s
       retries: 5
 
-  # local stand-in for s3, api on 9000 and web console on 9001
-  minio:
-    image: minio/minio:latest
-    command: server /data --console-address ":9001"
+  # local stand-in for s3 on port 9000. it accepts any credentials and creates
+  # the bucket the app expects on startup.
+  s3:
+    image: adobe/s3mock:5.2.3
+    # the image runs as uid 1000, which cannot write to a fresh named volume
+    user: root
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS: quantly-portfolios
+      COM_ADOBE_TESTING_S3MOCK_STORE_ROOT: /s3root
+      COM_ADOBE_TESTING_S3MOCK_STORE_RETAIN_FILES_ON_EXIT: "true"
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "9000:9090"
     volumes:
-      - minio_data:/data
+      - s3_data:/s3root
 
-  # celery worker: consumes analysis jobs off redis, talks to postgres + minio
+  # celery worker: consumes analysis jobs off redis, talks to postgres + s3
   worker:
     build:
       context: ./backend
       dockerfile: Dockerfile.worker
+      # the c++ engine sits outside the backend context
+      additional_contexts:
+        engine: ./engine
     depends_on:
       postgres:
         condition: service_healthy
@@ -55,21 +60,9 @@ services:
       QUANTLY_REDIS_URL: redis://redis:6379/0
       QUANTLY_CELERY_BROKER_URL: redis://redis:6379/1
       QUANTLY_CELERY_RESULT_BACKEND: redis://redis:6379/2
-      QUANTLY_S3_ENDPOINT_URL: http://minio:9000
-
-  # one-shot: wait for minio then create the bucket the app expects
-  createbuckets:
-    image: minio/mc:latest
-    depends_on:
-      - minio
-    entrypoint: >
-      /bin/sh -c "
-      until mc alias set local http://minio:9000 minioadmin minioadmin; do sleep 1; done;
-      mc mb -p local/quantly-portfolios;
-      exit 0;
-      "
+      QUANTLY_S3_ENDPOINT_URL: http://s3:9090
 
 volumes:
   postgres_data:
   redis_data:
-  minio_data:
+  s3_data:

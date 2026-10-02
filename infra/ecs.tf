@@ -41,7 +41,7 @@ locals {
 
     QUANTLY_S3_BUCKET = module.s3.bucket_name
     QUANTLY_S3_REGION = var.aws_region
-    # blank out the local minio defaults so boto3 talks to real s3 and picks up
+    # blank out the local dev defaults so boto3 talks to real s3 and picks up
     # credentials from the task role
     QUANTLY_S3_ENDPOINT_URL       = ""
     QUANTLY_AWS_ACCESS_KEY_ID     = ""
