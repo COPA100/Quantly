@@ -78,6 +78,8 @@ terraform apply   # -var github_repository=owner/name on a fork
 cd ..
 ```
 
+An AWS account can only hold one GitHub OIDC provider. If yours already has one, import it first with `terraform import aws_iam_openid_connect_provider.github <arn>`.
+
 Both cost nothing to leave in place (a versioned bucket holding one small file, and a few IAM resources). The outputs feed step 1 and the [CI/CD](#cicd) setup.
 
 ### 1. Init
@@ -111,7 +113,9 @@ aws ecr get-login-password --region $REGION \
 
 # the task definitions run x86_64, so force the platform on arm machines
 docker build --platform linux/amd64 -t "$API_REPO:latest" ../backend
-docker build --platform linux/amd64 -t "$WORKER_REPO:latest" -f ../backend/Dockerfile.worker ../backend
+# the worker image compiles the c++ engine, which lives outside backend/
+docker build --platform linux/amd64 -t "$WORKER_REPO:latest" -f ../backend/Dockerfile.worker \
+  --build-context engine=../engine ../backend
 
 docker push "$API_REPO:latest"
 docker push "$WORKER_REPO:latest"

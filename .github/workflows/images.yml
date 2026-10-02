@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "backend/**"
+      - "engine/**"
       - ".github/workflows/images.yml"
   # deploy.yml calls this once the ecr repositories exist
   workflow_call:
@@ -33,6 +34,8 @@ jobs:
             dockerfile: backend/Dockerfile
           - service: worker
             dockerfile: backend/Dockerfile.worker
+            # the c++ engine is compiled into the worker image, from outside backend/
+            contexts: engine=engine
     env:
       # prs only prove the images build. pushing happens from the deploy
       # workflow, since the ecr repos only exist while the stack is up.
@@ -69,10 +72,21 @@ jobs:
         with:
           context: backend
           file: ${{ matrix.dockerfile }}
+          build-contexts: ${{ matrix.contexts }}
           platforms: linux/amd64
           push: ${{ env.PUSH == 'true' }}
+          # keep unpushed builds in the local docker so the check below can run them
+          load: ${{ env.PUSH != 'true' }}
           tags: |
             ${{ steps.image.outputs.name }}:${{ github.sha }}
             ${{ steps.image.outputs.name }}:latest
           cache-from: type=gha,scope=${{ matrix.service }}
           cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+      # the engine is optional at import time, so a broken build would quietly
+      # fall back to numpy. fail here instead.
+      - name: Check the worker image has the native engine
+        if: matrix.service == 'worker'
+        run: |
+          docker run --rm "${{ steps.image.outputs.name }}:${{ github.sha }}" \
+            python -c "from common.analytics import accelerated; assert accelerated.using_native()"

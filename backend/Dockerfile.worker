@@ -1,3 +1,21 @@
+# the c++ engine lives outside this build context (../engine), so it comes in
+# as a second, named context:
+#   docker build -f Dockerfile.worker --build-context engine=../engine .
+
+# ---- stage 1: compile the engine into a wheel ----
+FROM python:3.13-slim AS engine-build
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends g++ \
+    && rm -rf /var/lib/apt/lists/*
+
+# same pinned build stack as the engine ci workflow
+RUN pip install --no-cache-dir scikit-build-core==1.0.3 pybind11==3.0.4 cmake==4.4.0 ninja==1.13.0
+
+COPY --from=engine . /engine
+RUN pip wheel --no-deps --no-build-isolation --wheel-dir /wheels /engine
+
+# ---- stage 2: the worker itself, no compiler in the final image ----
 FROM python:3.13-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -8,6 +26,9 @@ WORKDIR /app
 # worker deps carry pandas/numpy/yfinance for the analytics the api image omits
 COPY requirements/ requirements/
 RUN pip install --no-cache-dir -r requirements/worker.txt
+
+RUN --mount=type=bind,from=engine-build,source=/wheels,target=/wheels \
+    pip install --no-cache-dir /wheels/*.whl
 
 COPY . .
 
