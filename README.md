@@ -185,14 +185,18 @@ pip install ./engine
 make lint     # ruff, isort, black
 make test     # pytest
 cd frontend && npm test   # vitest
+cd backend && HYPOTHESIS_PROFILE=ci pytest tests/property   # property tests, see tests/property/README.md
 ```
 
 | Workflow | Runs on | Does |
 |---|---|---|
-| `lint`, `test` | every push and PR | ruff, isort, black, pytest |
+| `lint`, `test` | every push and PR | ruff, isort, black, pytest (including the Hypothesis property tests on a fixed seed). The job summary shows a coverage table and the XML is uploaded as an artifact |
 | `engine` | every push and PR | builds the C++ engine, runs its Catch2 tests, then pytest with the engine installed so the Python/C++ parity tests run |
 | `images` | PRs touching `backend/` | builds the api and worker images |
 | `frontend` | every push and PR | oxlint, type-check and build, vitest |
+| `sanitizers` | PRs and pushes touching `engine/` | builds the engine tests with AddressSanitizer and UBSan (`-DQUANTLY_SANITIZE=ON`) and runs them |
+| `fuzz` | PRs touching the CSV parser or engine, weekly, on demand | Atheris on `parse_portfolio` (only `CSVValidationError` may escape) and a libFuzzer harness over the drawdown, correlation and VaR kernels. 60s per target on PRs, 10 minutes weekly. Crashing inputs are uploaded |
+| `e2e` | pushes to `main`, PRs touching app code | Playwright against docker compose: register, upload `ex1.csv`, wait for the analysis, check the sections render. Prices are seeded, no Yahoo calls ([details](./e2e/README.md)) |
 | `terraform plan` | PRs touching `infra/` | fmt, validate, and a plan posted as a PR comment |
 | `deploy` | push to `main`, while enabled | pushes images to ECR, `terraform apply`, migrations, smoke test |
 
