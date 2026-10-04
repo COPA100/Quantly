@@ -1,0 +1,19 @@
+{
+  "note": "numpy time / C++ time on one machine; regenerate with compare_baseline.py --update after an intentional change",
+  "environment": {
+    "python": "3.14.0",
+    "numpy": "2.3.4",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "cpu": "Intel(R) Core(TM) Ultra 9 185H",
+    "logical_cpus": 22,
+    "engine_threads": 22
+  },
+  "ratios": {
+    "drawdown_5040": 44.52,
+    "correlation_100_1t": 0.5,
+    "correlation_500_1t": 0.14,
+    "mc_var_20k_1t": 0.8,
+    "mc_var_100k_1t": 0.78,
+    "qmc_var_100k_1t": 1.35
+  }
+}

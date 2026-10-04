@@ -1,0 +1,49 @@
+name: bench
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "engine/**"
+      - "benchmarks/**"
+      - ".github/workflows/bench.yml"
+  pull_request:
+    paths:
+      - "engine/**"
+      - "benchmarks/**"
+      - ".github/workflows/bench.yml"
+
+jobs:
+  bench:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install build tooling and numpy
+        run: pip install scikit-build-core==1.0.3 pybind11==3.0.4 cmake==4.4.0 ninja==1.13.0 numpy==2.3.4
+
+      - name: Build and install the engine
+        run: pip install ./engine --no-build-isolation
+
+      # shared runners are noisy: three runs, per-ratio median, and only ratios of
+      # single-thread C++ over numpy are gated so core count does not matter
+      - name: Run benchmarks (3 repeats)
+        run: |
+          for i in 1 2 3; do
+            python benchmarks/run_benchmarks.py --quick --json bench-$i.json > /dev/null
+          done
+
+      - name: Compare against the committed baseline
+        run: python benchmarks/compare_baseline.py bench-1.json bench-2.json bench-3.json --tolerance 0.15
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bench-results
+          path: bench-*.json
