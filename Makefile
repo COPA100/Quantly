@@ -13,7 +13,7 @@ dev:  ## Run the API locally with autoreload
 	cd backend && uvicorn api.main:app --reload
 
 test:  ## Run the test suite
-	cd backend && pytest
+	cd backend && pytest && pytest ../infra/lambda
 
 format:  ## Auto-format (isort + black)
 	cd backend && isort . && black .

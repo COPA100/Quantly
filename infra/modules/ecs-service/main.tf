@@ -93,6 +93,10 @@ resource "aws_ecs_service" "this" {
   ]
 
   lifecycle {
+    # application auto scaling owns the task count once it is attached, and a
+    # later apply must not reset it to desired_count
+    ignore_changes = [desired_count]
+
     precondition {
       condition     = var.load_balancer == null || var.container_port != null
       error_message = "container_port is required when the service sits behind a load balancer."

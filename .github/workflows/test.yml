@@ -38,3 +38,8 @@ jobs:
         with:
           name: backend-coverage
           path: backend/coverage.xml
+        run: pytest
+
+      - name: pytest (queue depth lambda)
+        working-directory: backend
+        run: pytest ../infra/lambda

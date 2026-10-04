@@ -255,6 +255,22 @@ All have defaults, see `variables.tf`. The ones worth knowing:
 | `worker_capacity_provider` | `FARGATE_SPOT` | Switch to `FARGATE` if Spot capacity is unavailable. |
 | `api_cpu` / `api_memory` | `256` / `512` | |
 | `worker_cpu` / `worker_memory` | `1024` / `2048` | |
+| `enable_autoscaling` | `true` | Worker scaling on queue backlog, api scaling on request count and cpu. See below. |
+| `worker_min_count` / `worker_max_count` | `0` / `5` | Bounds for the worker. At 0 an idle stack runs no workers. |
+| `worker_backlog_target` | `20` | Queued jobs per running worker to hold. Derive it from `docs/capacity.md`, 20 is a placeholder. |
+| `api_min_count` / `api_max_count` | `1` / `4` | |
+| `api_requests_per_target` / `api_cpu_target` | `600` / `60` | Per-minute requests per api task and average cpu percent. |
+
+## Autoscaling
+
+`autoscaling.tf`, behind `enable_autoscaling`. **Not validated:** it was written without a Terraform install, so run `terraform fmt`, `validate` and `plan` before trusting it.
+
+- A small Lambda (`lambda/queue_depth/handler.py`, stdlib plus boto3) runs every minute in the VPC. It reads `LLEN` of the celery queue from Redis db 1 and the running task count from `DescribeServices`, then publishes `Quantly/QueueDepth` and `Quantly/BacklogPerWorker` (depth divided by `max(running, 1)`).
+- The worker service has a target tracking policy on `BacklogPerWorker` with target `worker_backlog_target`. `ecs-service` ignores `desired_count` changes once autoscaling owns it.
+- The api service has two target tracking policies: ALB `RequestCountPerTarget` and average CPU. The higher desired count wins.
+- Because the stack has no NAT gateway, the Lambda reaches ECS and CloudWatch through two interface VPC endpoints. They bill hourly per subnet, so turn autoscaling off (or tear the stack down) when not demoing.
+- Scale from zero relies on the metric being defined at zero workers (hence the `max(running, 1)`) and on target tracking acting on it. If the plan or a test shows the worker staying at 0 with a backlog, set `worker_min_count = 1`.
+- Replay a depth series through the same policy math with `loadtest/simulate_scaling.py`.
 
 ## Cost
 

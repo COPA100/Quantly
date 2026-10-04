@@ -26,6 +26,7 @@ frontend/.vite/
 *.tfstate.*
 crash.log
 *.tfplan
+infra/.build/
 
 # ---- Env / secrets ----
 .env
