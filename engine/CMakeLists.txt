@@ -4,6 +4,12 @@ project(quantly_engine LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+  set(CMAKE_BUILD_TYPE Release CACHE STRING "build type" FORCE)
+endif()
+
+find_package(Threads REQUIRED)
+
 option(QUANTLY_BUILD_TESTS "Build the C++ unit tests instead of the python module" OFF)
 
 option(QUANTLY_SANITIZE "Build with AddressSanitizer and UndefinedBehaviorSanitizer" OFF)
@@ -19,8 +25,11 @@ add_library(quantly_core STATIC
   src/cpp/drawdown.cpp
   src/cpp/correlation.cpp
   src/cpp/var.cpp
+  src/cpp/normal.cpp
+  src/cpp/sobol.cpp
 )
 target_include_directories(quantly_core PUBLIC src/cpp)
+target_link_libraries(quantly_core PUBLIC Threads::Threads)
 set_target_properties(quantly_core PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 if(QUANTLY_BUILD_TESTS)

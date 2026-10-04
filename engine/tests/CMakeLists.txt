@@ -11,6 +11,7 @@ add_executable(quantly_tests
   test_drawdown.cpp
   test_correlation.cpp
   test_var.cpp
+  test_rng.cpp
 )
 target_link_libraries(quantly_tests PRIVATE quantly_core Catch2::Catch2WithMain)
 
