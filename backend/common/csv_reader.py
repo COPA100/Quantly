@@ -1,3 +1,5 @@
+import csv
+
 import pandas as pd
 
 REQUIRED_COLUMNS = ("Symbol", "Qty (Quantity)", "Cost Basis")
@@ -13,7 +15,12 @@ def parse_portfolio(file_path):
     try:
         # skipfooter only exists in the python parser, name it so pandas doesn't warn
         df = pd.read_csv(file_path, skiprows=2, skipfooter=2, engine="python")
-    except (pd.errors.EmptyDataError, pd.errors.ParserError) as exc:
+    except (
+        pd.errors.EmptyDataError,
+        pd.errors.ParserError,
+        UnicodeDecodeError,  # not utf-8, e.g. a binary file renamed .csv
+        csv.Error,  # the python engine raises this on a quote left open at eof
+    ) as exc:
         raise CSVValidationError("file is not a readable csv") from exc
 
     missing = [c for c in REQUIRED_COLUMNS if c not in df.columns]

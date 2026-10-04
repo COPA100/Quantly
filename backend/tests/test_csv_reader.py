@@ -1,6 +1,8 @@
+import io
+
 import pytest
 
-from common.csv_reader import parse_portfolio
+from common.csv_reader import CSVValidationError, parse_portfolio
 
 # mirrors the brokerage export shape: banner line, blank line, header,
 # holding rows, then cash + account-total footer rows.
@@ -46,3 +48,15 @@ def test_purchase_price_derived_from_cost_basis(export_csv):
     assert positions[0]["purchase_price"] == 150.00
     assert positions[1]["purchase_price"] == 400.00
     assert positions[2]["purchase_price"] == round(5.30 / 0.018, 2)
+
+
+def test_non_utf8_bytes_are_a_validation_error():
+    with pytest.raises(CSVValidationError):
+        parse_portfolio(io.BytesIO(b"\xff\xfe\x00\x81" * 50))
+
+
+def test_unterminated_quote_is_a_validation_error():
+    # the python engine raises csv.Error for a quote left open at end of file
+    broken = EXPORT.replace('"Account Total"', '"Account Total').encode()
+    with pytest.raises(CSVValidationError):
+        parse_portfolio(io.BytesIO(broken))
