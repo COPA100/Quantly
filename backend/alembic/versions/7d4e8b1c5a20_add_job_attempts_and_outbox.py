@@ -1,7 +1,7 @@
 """add job attempts and outbox
 
 Revision ID: 7d4e8b1c5a20
-Revises: 3c1f2a9d7b10
+Revises: 5a8e1c4b2f90
 Create Date: 2026-10-04 19:00:00.000000
 
 """
@@ -14,7 +14,7 @@ from alembic import op
 
 # revision identifiers, used by alembic
 revision: str = "7d4e8b1c5a20"
-down_revision: str | Sequence[str] | None = "3c1f2a9d7b10"
+down_revision: str | Sequence[str] | None = "5a8e1c4b2f90"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
