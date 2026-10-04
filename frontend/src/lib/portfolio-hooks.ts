@@ -1,16 +1,61 @@
-import { useQuery } from '@tanstack/react-query'
-import { getAnalytics, getPortfolio, getPortfolioStatus } from './portfolio-api'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect, useState } from 'react'
+import {
+  getAnalytics,
+  getPortfolio,
+  getPortfolioStatus,
+  streamPortfolioStatus,
+} from './portfolio-api'
 import { isTerminalStatus } from './types'
 
-// polls the status endpoint until the analysis reaches a terminal state
+const POLL_INTERVAL_MS = 1500
+
+// live status for a portfolio. updates arrive over a server-sent stream; if the
+// stream can't be opened or drops before a terminal state, this falls back to
+// polling the status endpoint until the analysis finishes.
 export function usePortfolioStatus(id: number) {
+  const queryClient = useQueryClient()
+  const [streamFailed, setStreamFailed] = useState(false)
+  const valid = Number.isFinite(id)
+
+  useEffect(() => {
+    if (!valid) return
+    const controller = new AbortController()
+    let finished = false
+    setStreamFailed(false)
+
+    streamPortfolioStatus(
+      id,
+      (status) => {
+        queryClient.setQueryData(['portfolio-status', id], status)
+        if (isTerminalStatus(status.status)) {
+          finished = true
+          void queryClient.invalidateQueries({ queryKey: ['portfolio', id] })
+          void queryClient.invalidateQueries({ queryKey: ['analytics', id] })
+        }
+      },
+      controller.signal,
+    ).then(
+      () => {
+        if (!finished) setStreamFailed(true)
+      },
+      () => {
+        if (!controller.signal.aborted) setStreamFailed(true)
+      },
+    )
+
+    return () => controller.abort()
+  }, [id, valid, queryClient])
+
   return useQuery({
     queryKey: ['portfolio-status', id],
     queryFn: () => getPortfolioStatus(id),
-    enabled: Number.isFinite(id),
+    enabled: valid,
+    // the stream keeps the cache fresh, so only poll once it has failed
     refetchInterval: (query) => {
       const status = query.state.data?.status
-      return status && isTerminalStatus(status) ? false : 1500
+      if (status && isTerminalStatus(status)) return false
+      return streamFailed ? POLL_INTERVAL_MS : false
     },
   })
 }

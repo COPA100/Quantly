@@ -56,7 +56,7 @@ flowchart LR
         end
         s3[("S3<br/>raw CSVs")]
         rds[("RDS Postgres<br/>users, holdings,<br/>prices, results")]
-        redis[("ElastiCache Redis<br/>job queue + caches")]
+        redis[("ElastiCache Redis<br/>job queue, caches,<br/>status pub/sub")]
     end
 
     browser -- "HTTPS + JWT" --> alb --> api
@@ -64,6 +64,8 @@ flowchart LR
     api -- "rows, job status" --> rds
     api -- "enqueue job" --> redis
     redis -- "deliver job" --> worker
+    worker -- "status updates (pub/sub)" --> redis
+    api -- "SSE status stream" --> browser
     worker -- "read CSV" --> s3
     worker -- "prices in, results out" --> rds
     worker -- "fetch missing history" --> yahoo
@@ -74,7 +76,7 @@ flowchart LR
 1. The user signs in with email and password, or with Google. Either way the API issues its own short-lived access JWT plus a rotating refresh token, so nothing downstream ever sees a Google token.
 2. They upload a CSV. The API validates it, stores the raw file in S3, writes the holdings to Postgres, enqueues an analysis job on Redis, and returns `202 Accepted` straight away.
 3. A Celery worker picks the job up, fetches whatever price history it is missing, computes the metrics, and writes the results back to Postgres.
-4. The frontend polls the job status and renders the charts and insight cards once it completes.
+4. The worker publishes each status change to a Redis channel for that portfolio. The frontend holds a Server-Sent Events stream open (`GET /portfolios/{id}/events`). The api sends the current status first, then relays those changes until the analysis completes or fails, and renders the charts and insight cards. If the stream can't be opened or drops early, it falls back to polling `/status`.
 
 ### Design decisions
 
@@ -243,7 +245,7 @@ The full path works end to end: auth, upload, async analysis, the insight layer,
 
 Known gaps:
 
-- Job status is polled. There is no WebSocket or SSE push.
+- The status stream uses Redis pub/sub, which is fire-and-forget. A message published while no stream is listening is lost, so each stream starts from the database status, and the client polls if a stream drops. Each open stream holds one API connection and one Redis connection until the analysis finishes (capped at 10 minutes).
 
 ## Motivation
 

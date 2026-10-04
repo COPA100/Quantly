@@ -52,7 +52,9 @@ function refreshOnce(): Promise<boolean> {
   return refreshInFlight
 }
 
-export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
+// fetch with the bearer token, rotating it once on a 401. returns the raw
+// response, so streaming callers can read the body themselves
+export async function authedFetch(path: string, options: RequestInit = {}): Promise<Response> {
   let res = await fetch(buildRequest(path, options))
 
   // access token likely expired: rotate once and replay the request
@@ -64,6 +66,11 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
       window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT))
     }
   }
+  return res
+}
+
+export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const res = await authedFetch(path, options)
 
   if (!res.ok) {
     const body = (await res.json().catch(() => null)) as { detail?: string } | null

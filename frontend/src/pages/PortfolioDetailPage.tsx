@@ -20,7 +20,7 @@ export default function PortfolioDetailPage() {
   const portfolioId = Number(id)
   const status = usePortfolioStatus(portfolioId)
   const portfolio = usePortfolio(portfolioId)
-  // the polled status is the live source of truth; fall back to the snapshot
+  // the live status is the source of truth; fall back to the snapshot
   const liveStatus = status.data?.status ?? portfolio.data?.status ?? 'pending'
   const complete = liveStatus === 'complete'
   const analytics = useAnalytics(portfolioId, complete)
