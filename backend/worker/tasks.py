@@ -4,6 +4,7 @@ from typing import Any
 from sqlalchemy import delete, select
 
 from common.db import SessionLocal
+from common.events import publish_status
 from common.models import AnalyticsResult, Job, Portfolio, PortfolioStatus
 from worker.analysis import compute_analytics
 from worker.celery_app import celery_app
@@ -50,6 +51,8 @@ def _mark_failed(db, portfolio_id: int, job_id: int | None, exc: Exception) -> N
         portfolio.error_message = str(exc)[:500]
     _finish_job(db, job_id, "failed")
     db.commit()
+    if portfolio is not None:
+        publish_status(portfolio, db.get(Job, job_id) if job_id is not None else None)
 
 
 @celery_app.task(bind=True, name="analyze_portfolio")
@@ -72,6 +75,7 @@ def analyze_portfolio(self, portfolio_id: int) -> dict:
             job.started_at = _utcnow()
         portfolio.status = PortfolioStatus.PROCESSING
         db.commit()
+        publish_status(portfolio, job)
 
         try:
             results = compute_analytics(db, portfolio)
@@ -80,6 +84,7 @@ def analyze_portfolio(self, portfolio_id: int) -> dict:
             portfolio.error_message = None
             _finish_job(db, job_id, "succeeded")
             db.commit()
+            publish_status(portfolio, job)
             return {
                 "portfolio_id": portfolio_id,
                 "status": str(PortfolioStatus.COMPLETE),

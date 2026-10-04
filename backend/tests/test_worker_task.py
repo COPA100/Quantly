@@ -1,3 +1,4 @@
+import json
 from datetime import date, timedelta
 
 import fakeredis
@@ -6,6 +7,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
+import common.events as events
 import common.models  # noqa: F401  registers every model on the metadata
 import worker.analysis as analysis
 import worker.cache as cache
@@ -88,6 +90,7 @@ def wired(monkeypatch):
     # in-memory redis for the analytics cache
     client = fakeredis.FakeRedis(decode_responses=True)
     monkeypatch.setattr(cache, "get_redis", lambda: client)
+    monkeypatch.setattr(events, "get_redis", lambda: client)
 
     return session_factory, calls
 
@@ -160,4 +163,66 @@ def test_identical_portfolio_reuses_cached_analytics(wired):
     db = session_factory()
     assert db.get(Portfolio, pid2).status == PortfolioStatus.COMPLETE
     assert db.query(AnalyticsResult).filter_by(portfolio_id=pid2).count() == len(METRIC_NAMES)
+    db.close()
+
+
+def _listen(client, portfolio_id):
+    pubsub = client.pubsub(ignore_subscribe_messages=True)
+    pubsub.subscribe(events.portfolio_channel(portfolio_id))
+    return pubsub
+
+
+def _drain(pubsub):
+    # the first read can be eaten by the (ignored) subscribe ack, so poll a few times
+    out = []
+    for _ in range(10):
+        message = pubsub.get_message(timeout=0.02)
+        if message is not None:
+            out.append(json.loads(message["data"]))
+    return out
+
+
+def test_task_publishes_each_status_transition(wired):
+    session_factory, _ = wired
+    pid, _ = _seed_portfolio(session_factory, "task-pub")
+    pubsub = _listen(cache.get_redis(), pid)
+
+    tasks.analyze_portfolio.apply(args=[pid], task_id="task-pub")
+
+    sent = _drain(pubsub)
+    assert [m["status"] for m in sent] == ["processing", "complete"]
+    assert all(m["id"] == pid for m in sent)
+    assert [m["job"]["status"] for m in sent] == ["running", "succeeded"]
+    assert sent[-1]["job"]["finished_at"] is not None
+
+
+def test_task_publishes_failed_when_analysis_raises(wired, monkeypatch):
+    session_factory, _ = wired
+    pid, _ = _seed_portfolio(session_factory, "task-boom")
+    pubsub = _listen(cache.get_redis(), pid)
+
+    def boom(db, portfolio):
+        raise RuntimeError("no prices")
+
+    monkeypatch.setattr(tasks, "compute_analytics", boom)
+    tasks.analyze_portfolio.apply(args=[pid], task_id="task-boom")
+
+    sent = _drain(pubsub)
+    assert [m["status"] for m in sent] == ["processing", "failed"]
+    assert sent[-1]["job"]["status"] == "failed"
+
+
+def test_publish_failure_does_not_break_the_task(wired, monkeypatch):
+    session_factory, _ = wired
+    pid, _ = _seed_portfolio(session_factory, "task-nopub")
+
+    def broken():
+        raise ConnectionError("redis down")
+
+    monkeypatch.setattr(events, "get_redis", broken)
+    result = tasks.analyze_portfolio.apply(args=[pid], task_id="task-nopub")
+    assert result.successful()
+
+    db = session_factory()
+    assert db.get(Portfolio, pid).status == PortfolioStatus.COMPLETE
     db.close()

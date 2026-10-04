@@ -4,19 +4,24 @@ from decimal import Decimal
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
+from fastapi.concurrency import run_in_threadpool
+from fastapi.responses import StreamingResponse
+from redis.asyncio import Redis
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from api.deps import get_current_user, get_enqueuer
+from api.deps import get_async_redis, get_current_user, get_enqueuer
 from api.schemas.portfolio import (
     PortfolioAccepted,
     PortfolioDetail,
     PortfolioRead,
     PortfolioStatusRead,
 )
+from api.services.events import status_stream
 from common.config import get_settings
 from common.csv_reader import CSVValidationError, parse_portfolio
 from common.db import get_db
+from common.events import status_payload
 from common.models import AnalyticsResult, Holding, Job, Portfolio, PortfolioStatus, User
 from common.storage import Storage, get_storage
 
@@ -121,6 +126,51 @@ def get_portfolio_status(
         select(Job).where(Job.portfolio_id == portfolio_id).order_by(Job.id.desc())
     )
     return PortfolioStatusRead(id=portfolio.id, status=portfolio.status, job=latest_job)
+
+
+@router.get("/{portfolio_id}/events")
+async def stream_portfolio_status(
+    portfolio_id: int,
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[User, Depends(get_current_user)],
+    redis: Annotated[Redis, Depends(get_async_redis)],
+):
+    # server-sent status updates, replacing the client polling /status. same
+    # ownership rule as /status, checked before the stream opens.
+    def load() -> dict[str, Any]:
+        try:
+            portfolio = db.scalar(
+                select(Portfolio).where(Portfolio.id == portfolio_id, Portfolio.user_id == user.id)
+            )
+            if portfolio is None:
+                raise HTTPException(status_code=404, detail="portfolio not found")
+            latest_job = db.scalar(
+                select(Job).where(Job.portfolio_id == portfolio_id).order_by(Job.id.desc())
+            )
+            return status_payload(portfolio, latest_job)
+        finally:
+            # don't sit on a pooled connection for the life of the stream
+            db.close()
+
+    async def load_snapshot() -> dict[str, Any]:
+        # sync db work stays off the event loop
+        return await run_in_threadpool(load)
+
+    # 404 now, while we can still send a normal response
+    await load_snapshot()
+
+    return StreamingResponse(
+        status_stream(
+            redis,
+            portfolio_id,
+            load_snapshot,
+            settings.sse_heartbeat_seconds,
+            settings.sse_max_seconds,
+        ),
+        media_type="text/event-stream",
+        # no-transform and x-accel-buffering stop proxies from buffering the stream
+        headers={"Cache-Control": "no-cache, no-transform", "X-Accel-Buffering": "no"},
+    )
 
 
 @router.get("/{portfolio_id}/analytics")

@@ -35,6 +35,11 @@ class Settings(BaseSettings):
     celery_broker_url: str = "redis://localhost:6379/1"
     celery_result_backend: str = "redis://localhost:6379/2"
 
+    # server-sent status stream. the heartbeat stays well under the alb idle
+    # timeout (60s); the cap bounds how long one request can hold a connection.
+    sse_heartbeat_seconds: float = 15
+    sse_max_seconds: float = 600
+
     # computed analytics cached by holdings+as-of hash. one day, since a given
     # book's metrics only change when prices roll over to the next day.
     analytics_cache_ttl_seconds: int = 86400

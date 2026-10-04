@@ -1,14 +1,16 @@
-from collections.abc import Callable
+from collections.abc import AsyncIterator, Callable
 from typing import Annotated
 
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from redis.asyncio import Redis
 from sqlalchemy.orm import Session
 
 from api.security.google import verify_google_id_token
 from api.security.tokens import TokenError, decode_access_token
 from common.db import get_db
 from common.models import User
+from common.redis_client import new_async_redis
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -28,6 +30,15 @@ def get_enqueuer() -> Callable[[int], str]:
         return result.id
 
     return enqueue
+
+
+async def get_async_redis() -> AsyncIterator[Redis]:
+    # per-request client for the status stream, closed when the response ends
+    client = new_async_redis()
+    try:
+        yield client
+    finally:
+        await client.aclose()
 
 
 def get_current_user(
