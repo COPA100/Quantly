@@ -60,6 +60,32 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 15
     refresh_token_expire_days: int = 30
 
+    # worker reliability. the lock ttl is renewed by a heartbeat, so it only has
+    # to outlive a few missed beats after a crash.
+    analysis_lock_ttl_seconds: float = 30
+    task_max_attempts: int = 4
+    retry_base_seconds: float = 2
+    retry_cap_seconds: float = 60
+    # redis redelivers an unacked task after this long. keep it above the
+    # longest retry backoff or a waiting retry gets delivered twice.
+    broker_visibility_timeout_seconds: int = 300
+
+    # outbox relay and the sweeper for portfolios stuck in pending/processing
+    outbox_relay_interval_seconds: float = 2
+    outbox_batch_size: int = 50
+    sweeper_interval_seconds: float = 60
+    stuck_after_seconds: int = 900
+
+    # sliding-window rate limits: max requests per window, per user (upload)
+    # or per client ip (login)
+    rate_limit_enabled: bool = True
+    rate_limit_upload_max: int = 10
+    rate_limit_upload_window_seconds: int = 60
+    rate_limit_login_max: int = 10
+    rate_limit_login_window_seconds: int = 60
+    # short timeouts so a dead redis fails fast instead of hanging requests
+    redis_socket_timeout_seconds: float = 2
+
     # google sign-in. the client id is the audience the id token must match.
     google_client_id: str = ""
 

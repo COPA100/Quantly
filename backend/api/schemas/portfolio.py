@@ -42,6 +42,7 @@ class JobStatusRead(BaseModel):
 
     id: int
     status: str
+    attempts: int = 0
     started_at: datetime | None
     finished_at: datetime | None
 

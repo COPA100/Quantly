@@ -29,6 +29,7 @@ def status_payload(portfolio: Portfolio, job: Job | None) -> dict[str, Any]:
             else {
                 "id": job.id,
                 "status": job.status,
+                "attempts": job.attempts or 0,
                 "started_at": job.started_at.isoformat() if job.started_at else None,
                 "finished_at": job.finished_at.isoformat() if job.finished_at else None,
             }
