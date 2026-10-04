@@ -8,6 +8,7 @@ order, and an analyzer can read the results of the ones before it through
 from common.analytics.analyzers import (
     correlation,
     equity_curve,
+    frontier,
     insights,
     overview,
     performance,
@@ -27,6 +28,7 @@ REGISTRY: list[Analyzer] = [
     insights.insights,
     stress.stress,
     var_suite.var_suite,
+    frontier.frontier,
 ]
 
 __all__ = ["REGISTRY", "Analyzer", "analyzer", "run_analyzers"]
