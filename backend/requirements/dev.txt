@@ -10,3 +10,8 @@ isort==5.13.2
 pytest==8.3.4
 httpx==0.28.1  # required by fastapi's TestClient
 fakeredis==2.37.0  # in-memory redis for cache tests
+
+# property-based tests, reference metrics for golden checks, lua for fakeredis scripts
+hypothesis==6.168.3
+empyrical-reloaded==0.5.12
+lupa==2.8

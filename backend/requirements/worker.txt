@@ -6,3 +6,6 @@ celery[redis]==5.6.3
 
 # market data. only the worker fetches prices, so the api image skips it.
 yfinance==0.2.66
+
+# optimization and statistical tests in the analyzers (frontier, var backtests)
+scipy==1.18.1
