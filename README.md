@@ -136,6 +136,7 @@ engine/         C++ sources, pybind11 bindings, Catch2 tests
 benchmarks/     C++ vs NumPy vs pure Python
 frontend/       React app
 infra/          Terraform, see infra/README.md
+loadtest/       k6 scenarios, pinned compose override, capacity model
 example_csv/    sample brokerage exports to upload
 ```
 
@@ -222,6 +223,18 @@ QUANTLY_OTEL_ENABLED=true uvicorn api.main:app
 | Worker metrics | http://localhost:9100 |
 
 The dashboard shows request rate, p50/p95/p99 latency, 5xx ratio, job duration, a per-analyzer breakdown, queue depth, retries and failures, cache hit ratio and SLO burn rates. An upload shows up in Jaeger as one trace from the API request through the queue to the worker task and each analyzer. SLOs and the burn-rate alert rules are in [`docs/slo.md`](./docs/slo.md).
+
+## Load testing and scaling
+
+[`loadtest/`](./loadtest) has a k6 test with three scenarios (steady, ramp until it breaks, upload burst) and a compose override that pins CPU and memory for each service and runs the api in a container. Market data comes from a deterministic synthetic source (`QUANTLY_MARKET_DATA_SOURCE=mock`) so runs do not touch Yahoo and are repeatable. The thresholds are the ones in [`docs/slo.md`](./docs/slo.md).
+
+```bash
+SCENARIO=burst WORKERS=2 BOOK=cold make loadtest   # needs docker, k6 runs from its image
+```
+
+`loadtest/capacity.py` turns the burst results into per-worker throughput and a worker count (Little's law), and `loadtest/simulate_scaling.py` replays a queue depth series through the autoscaling policy. The model is in [`docs/capacity.md`](./docs/capacity.md). That file has no measured numbers yet; the tables are empty until the tests have been run.
+
+In AWS, workers scale on backlog per worker (queue depth divided by running workers), published by a small Lambda, and the api scales on request count and CPU. See `infra/README.md`. It has not been through `terraform validate` or `plan` yet.
 
 ## Running a demo on AWS
 
