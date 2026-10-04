@@ -1,19 +1,14 @@
-import { lazy, Suspense } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import AnalysisProgress from '../components/AnalysisProgress'
-import CorrelationHeatmap from '../components/CorrelationHeatmap'
 import HoldingsTable from '../components/HoldingsTable'
-import PortfolioOverview from '../components/PortfolioOverview'
-import RiskInsights from '../components/RiskInsights'
 import Section from '../components/Section'
+import SectionBoundary from '../components/SectionBoundary'
 import Spinner from '../components/Spinner'
 import StatusBadge from '../components/StatusBadge'
 import { errorMessage } from '../lib/api'
 import { useAnalytics, usePortfolio, usePortfolioStatus } from '../lib/portfolio-hooks'
 import { isTerminalStatus } from '../lib/types'
-
-// the charting library is heavy; load it only when a detail page needs it
-const EquityChart = lazy(() => import('../components/EquityChart'))
+import { SECTIONS } from '../sections'
 
 export default function PortfolioDetailPage() {
   const { id } = useParams()
@@ -57,36 +52,11 @@ export default function PortfolioDetailPage() {
       )}
       {complete && analytics.data && (
         <>
-          <PortfolioOverview analytics={analytics.data} />
-          {analytics.data.equity_curve && analytics.data.equity_curve.dates.length > 1 && (
-            <Section title="Performance">
-              <div className="rounded-xl border border-slate-200 bg-white p-4">
-                <Suspense
-                  fallback={
-                    <div className="flex h-[280px] items-center justify-center">
-                      <Spinner />
-                    </div>
-                  }
-                >
-                  <EquityChart
-                    dates={analytics.data.equity_curve.dates}
-                    values={analytics.data.equity_curve.values}
-                  />
-                </Suspense>
-              </div>
-            </Section>
-          )}
-          <RiskInsights analytics={analytics.data} />
-          {analytics.data.correlation && analytics.data.correlation.tickers.length >= 2 && (
-            <Section title="Correlation">
-              {analytics.data.insights?.correlation && (
-                <p className="mb-3 text-sm text-slate-600">
-                  {analytics.data.insights.correlation}
-                </p>
-              )}
-              <CorrelationHeatmap correlation={analytics.data.correlation} />
-            </Section>
-          )}
+          {SECTIONS.map(({ key, component: SectionComponent }) => (
+            <SectionBoundary key={key} name={key}>
+              <SectionComponent analytics={analytics.data} />
+            </SectionBoundary>
+          ))}
         </>
       )}
 

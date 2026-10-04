@@ -80,4 +80,6 @@ export interface Analytics {
   equity_curve?: { dates: string[]; values: number[] }
   correlation?: Correlation
   insights?: Record<string, string>
+  // newer analyzers' results, read with `metric<T>()` from lib/metrics
+  [key: string]: unknown
 }
