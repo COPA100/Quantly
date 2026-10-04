@@ -12,8 +12,13 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
-import redis
-from prometheus_client import (
+# prometheus_client opens its mmap files when the first metric is created at import
+# time, so the multiprocess dir has to exist before the imports below
+if os.environ.get("PROMETHEUS_MULTIPROC_DIR"):
+    Path(os.environ["PROMETHEUS_MULTIPROC_DIR"]).mkdir(parents=True, exist_ok=True)
+
+import redis  # noqa: E402
+from prometheus_client import (  # noqa: E402
     CONTENT_TYPE_LATEST,
     CollectorRegistry,
     Counter,
@@ -22,9 +27,9 @@ from prometheus_client import (
     multiprocess,
     start_http_server,
 )
-from prometheus_client.core import GaugeMetricFamily
+from prometheus_client.core import GaugeMetricFamily  # noqa: E402
 
-from common.config import get_settings
+from common.config import get_settings  # noqa: E402
 
 logger = logging.getLogger(__name__)
 

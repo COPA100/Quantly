@@ -44,7 +44,7 @@ resource "aws_ecs_task_definition" "this" {
     cpu_architecture        = var.cpu_architecture
   }
 
-  container_definitions = jsonencode([local.container])
+  container_definitions = jsonencode(concat([local.container], local.collector))
 }
 
 resource "aws_ecs_service" "this" {

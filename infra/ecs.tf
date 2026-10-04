@@ -70,11 +70,14 @@ module "api" {
   security_group_ids = [module.network.api_security_group_id]
   container_port     = var.api_port
 
-  environment = merge(local.common_environment, {
+  environment = merge(local.common_environment, local.observability_environment, {
     # pydantic-settings parses list fields from json
     QUANTLY_CORS_ORIGINS     = jsonencode(var.cors_origins)
     QUANTLY_GOOGLE_CLIENT_ID = var.google_client_id
   })
+
+  enable_observability = var.enable_observability
+  metrics_target       = "localhost:${var.api_port}"
 
   secrets = {
     QUANTLY_DATABASE_URL = aws_ssm_parameter.database_url.arn
@@ -115,7 +118,15 @@ module "worker" {
   subnet_ids         = module.network.public_subnet_ids
   security_group_ids = [module.network.worker_security_group_id]
 
-  environment = local.common_environment
+  # prefork children write metrics to PROMETHEUS_MULTIPROC_DIR, the parent serves them on 9100
+  environment = merge(
+    local.common_environment,
+    local.observability_environment,
+    var.enable_observability ? { PROMETHEUS_MULTIPROC_DIR = "/tmp/prom" } : {},
+  )
+
+  enable_observability = var.enable_observability
+  metrics_target       = "localhost:9100"
 
   secrets = {
     QUANTLY_DATABASE_URL = aws_ssm_parameter.database_url.arn
