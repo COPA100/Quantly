@@ -29,6 +29,9 @@ if redis.call('ZCARD', KEYS[1]) < limit then
     return {1, 0}
 end
 local oldest = redis.call('ZRANGE', KEYS[1], 0, 0, 'WITHSCORES')
+if #oldest == 0 then
+    return {0, window}
+end
 return {0, tonumber(oldest[2]) + window - now}
 """
 
