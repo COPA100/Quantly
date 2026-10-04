@@ -2,6 +2,7 @@ import type { ComponentType } from 'react'
 import PortfolioOverview from './components/PortfolioOverview'
 import RiskInsights from './components/RiskInsights'
 import CorrelationSection from './components/sections/CorrelationSection'
+import FrontierSection from './components/sections/FrontierSection'
 import PerformanceSection from './components/sections/PerformanceSection'
 import StressSection from './components/sections/StressSection'
 import VarSection from './components/sections/VarSection'
@@ -23,4 +24,5 @@ export const SECTIONS: AnalyticsSection[] = [
   { key: 'correlation', component: CorrelationSection },
   { key: 'stress', component: StressSection },
   { key: 'var_suite', component: VarSection },
+  { key: 'frontier', component: FrontierSection },
 ]
