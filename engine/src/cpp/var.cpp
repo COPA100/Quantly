@@ -151,21 +151,47 @@ VaRResult monte_carlo_var_qmc(double mu, double sigma, int horizon, std::size_t 
         }
     }
 
+    // helmert basis: row 0 is the equal-weight direction, row k contrasts the
+    // first k days with day k. orthonormal, so z stays standard normal.
+    const auto h = static_cast<std::size_t>(horizon);
+    std::vector<double> basis(h * h, 0.0);
+    for (std::size_t d = 0; d < h; ++d) {
+        basis[d] = 1.0 / std::sqrt(static_cast<double>(h));
+    }
+    for (std::size_t k = 1; k < h; ++k) {
+        double norm = std::sqrt(static_cast<double>(k * (k + 1)));
+        for (std::size_t d = 0; d < k; ++d) {
+            basis[k * h + d] = 1.0 / norm;
+        }
+        basis[k * h + k] = -static_cast<double>(k) / norm;
+    }
+
     std::vector<double> pnl(n_sims);
     const std::size_t n_blocks = (n_sims + kBlock - 1) / kBlock;
     parallel_for(n_blocks, threads, [&](std::size_t b) {
         std::size_t first = b * kBlock;
         std::size_t n = std::min(kBlock, n_sims - first);
-        const auto h = static_cast<std::size_t>(horizon);
-        std::vector<double> z(n * h);
+        std::vector<double> w(n * h), z(n * h, 0.0);
         std::uint32_t state[kSobolMaxDim];
         sobol.point(first, state);
         for (std::size_t p = 0; p < n; ++p) {
             for (std::size_t d = 0; d < h; ++d) {
                 double u = (static_cast<double>(state[d] ^ shift[d]) + 0.5) * kInv2Pow32;
-                z[d * n + p] = inverse_normal_cdf(u);
+                w[d * n + p] = inverse_normal_cdf(u);
             }
             sobol.next(first + p, state);
+        }
+        // rotate: z = basis^T w, so the first (best-distributed) sobol dimension
+        // drives the common level of all days and later ones the small wiggles
+        for (std::size_t j = 0; j < h; ++j) {
+            for (std::size_t d = 0; d < h; ++d) {
+                double c = basis[j * h + d];
+                const double* wj = w.data() + j * n;
+                double* zd = z.data() + d * n;
+                for (std::size_t p = 0; p < n; ++p) {
+                    zd[p] += c * wj[p];
+                }
+            }
         }
         compound(z.data(), n, horizon, mu, sigma, pnl.data() + first);
     });

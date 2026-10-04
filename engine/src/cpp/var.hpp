@@ -20,8 +20,9 @@ struct VaRResult {
 VaRResult monte_carlo_var(double mu, double sigma, int horizon, std::size_t n_sims,
                           double confidence, unsigned long long seed, int threads = -1);
 
-// quasi-monte carlo variant: one sobol dimension per day (horizon <= 30), with a
-// seeded random digital shift so different seeds give independent replicates.
+// quasi-monte carlo variant: sobol points over a helmert rotation of the daily
+// shocks (horizon <= 30), with a seeded random digital shift so different seeds
+// give independent replicates.
 // powers of two for n_sims keep the point set balanced. same thread invariance.
 VaRResult monte_carlo_var_qmc(double mu, double sigma, int horizon, std::size_t n_sims,
                               double confidence, unsigned long long seed, int threads = -1);
