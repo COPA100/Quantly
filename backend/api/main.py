@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from api.routers import auth, health, portfolios
 from common.config import get_settings
+from common.telemetry import instrument_api
 
 settings = get_settings()
 
@@ -18,6 +19,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+instrument_api(app)
 
 
 @app.get("/")

@@ -1,6 +1,7 @@
 from celery import Celery
 
 from common.config import get_settings
+from common.telemetry import connect_celery_signals
 
 settings = get_settings()
 
@@ -39,3 +40,5 @@ celery_app.conf.update(
         },
     },
 )
+
+connect_celery_signals()

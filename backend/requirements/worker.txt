@@ -9,3 +9,5 @@ yfinance==0.2.66
 
 # optimization and statistical tests in the analyzers (frontier, var backtests)
 scipy==1.18.1
+
+opentelemetry-instrumentation-celery==0.66b0

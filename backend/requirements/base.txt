@@ -12,3 +12,12 @@ pandas==2.3.3
 numpy==2.3.4
 requests==2.32.5
 python-dateutil==2.9.0.post0
+
+# observability, all inert unless QUANTLY_OTEL_ENABLED=true (common/telemetry.py)
+opentelemetry-api==1.45.0
+opentelemetry-sdk==1.45.0
+opentelemetry-exporter-otlp-proto-http==1.45.0
+opentelemetry-instrumentation-sqlalchemy==0.66b0
+opentelemetry-instrumentation-redis==0.66b0
+opentelemetry-instrumentation-requests==0.66b0
+prometheus-client==0.26.0

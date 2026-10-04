@@ -85,6 +85,11 @@ class Settings(BaseSettings):
     rate_limit_login_window_seconds: int = 60
     # short timeouts so a dead redis fails fast instead of hanging requests
     redis_socket_timeout_seconds: float = 2
+    # observability. everything in common/telemetry.py is a no-op unless enabled.
+    otel_enabled: bool = False
+    otel_exporter_endpoint: str = "http://localhost:4318"  # otlp/http base url
+    metrics_port: int = 9100  # worker prometheus exporter
+    celery_queue_name: str = "celery"  # list whose length is the queue depth
 
     # google sign-in. the client id is the audience the id token must match.
     google_client_id: str = ""

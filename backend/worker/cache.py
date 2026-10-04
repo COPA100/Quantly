@@ -5,6 +5,7 @@ from typing import Any
 
 from common.config import get_settings
 from common.redis_client import get_redis
+from common.telemetry import record_cache
 
 
 def _key(digest: str) -> str:
@@ -24,6 +25,7 @@ def holdings_digest(positions: list[dict], as_of: date) -> str:
 
 def get_cached(digest: str) -> dict[str, Any] | None:
     raw = get_redis().get(_key(digest))
+    record_cache(raw is not None)
     return json.loads(raw) if raw is not None else None
 
 
