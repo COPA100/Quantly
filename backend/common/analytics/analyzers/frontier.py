@@ -54,7 +54,9 @@ def _insight(current: dict, points: list[dict]) -> str:
 
 @analyzer("frontier", keys=("frontier",))
 def frontier(ctx: AnalysisContext) -> dict[str, Any]:
-    returns = ctx.returns.dropna()
+    # fixed ticker order: the optimizer only converges to a tolerance, so input
+    # order would otherwise leak into the weights (and the cache is order free)
+    returns = ctx.returns.dropna().sort_index(axis=1)
     tickers = list(returns.columns)
     if len(tickers) < 2:
         return _empty("The efficient frontier needs at least two holdings with price history.")
