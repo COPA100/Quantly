@@ -1,0 +1,102 @@
+# load test stack: layered over the root compose file, run from the repo root with
+#   docker compose -f docker-compose.yml -f loadtest/docker-compose.loadtest.yml \
+#     up -d --build --scale worker=2 postgres redis s3 api worker beat
+# limits are pinned so runs are comparable between machines. see loadtest/README.md
+# for the hardware this assumes.
+
+x-load-env: &load-env
+  QUANTLY_DATABASE_URL: postgresql+psycopg://quantly:quantly@postgres:5432/quantly
+  QUANTLY_REDIS_URL: redis://redis:6379/0
+  QUANTLY_CELERY_BROKER_URL: redis://redis:6379/1
+  QUANTLY_CELERY_RESULT_BACKEND: redis://redis:6379/2
+  QUANTLY_S3_ENDPOINT_URL: http://s3:9090
+  # no yahoo in the loop, prices are synthetic and deterministic
+  QUANTLY_MARKET_DATA_SOURCE: mock
+  # the limits protect real deployments, a load run needs to get past them
+  QUANTLY_RATE_LIMIT_UPLOAD_MAX: ${QUANTLY_RATE_LIMIT_UPLOAD_MAX:-1000000}
+  QUANTLY_RATE_LIMIT_LOGIN_MAX: ${QUANTLY_RATE_LIMIT_LOGIN_MAX:-1000000}
+  # tokens must outlive the longest run
+  QUANTLY_ACCESS_TOKEN_EXPIRE_MINUTES: ${QUANTLY_ACCESS_TOKEN_EXPIRE_MINUTES:-120}
+
+services:
+  postgres:
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2g
+    # trades durability for speed, fine for a throwaway load database
+    command: ["postgres", "-c", "fsync=off", "-c", "max_connections=300"]
+
+  redis:
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512m
+
+  s3:
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1g
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      s3:
+        condition: service_started
+    environment:
+      <<: *load-env
+    command:
+      - sh
+      - -c
+      - alembic upgrade head && exec uvicorn api.main:app --host 0.0.0.0 --port 8000 --workers ${API_WORKERS:-2}
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 1g
+
+  # scale with --scale worker=N. every replica gets the same limits, so N workers
+  # is N x (cpus) of analysis capacity. the metrics port is not published because
+  # replicas would collide on it.
+  worker:
+    environment:
+      <<: *load-env
+    ports: !reset []
+    command:
+      - celery
+      - -A
+      - worker.celery_app
+      - worker
+      - --loglevel=warning
+      - --concurrency=${WORKER_CONCURRENCY:-2}
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2g
+
+  beat:
+    environment:
+      <<: *load-env
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256m

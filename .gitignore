@@ -52,3 +52,4 @@ fuzz/corpus/
 fuzz/artifacts/
 engine/fuzz/corpus/
 engine/fuzz/artifacts/
+loadtest/results/
