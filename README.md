@@ -41,6 +41,8 @@ Beyond current value and gain/loss, Quantly surfaces risk and diversification in
 | Allocation, concentration | How exposed am I to a handful of names? |
 | Historical stress tests | How would this exact portfolio have done in 2008, 2020 and 2022? Holdings without that history are estimated from beta. |
 | Efficient frontier | Could a different mix of these holdings have earned more for the same risk? |
+| Fama-French factor regression | Is my return just size, value or momentum exposure, or is there real alpha? |
+| Risk contribution | Which holdings drive most of my risk, not just most of my money? |
 
 It is a diagnostic tool. It does not recommend trades or execute them.
 
@@ -85,6 +87,7 @@ flowchart LR
 
 - **Two services, not one.** The api is small, stateless and latency-sensitive. The worker is CPU-bound and bursty. They are deployed, sized and scaled independently (0.25 vCPU on Fargate against 1 vCPU on Fargate Spot), so a heavy analysis never slows a request down.
 - **Uploads never block on compute.** The queue decouples upload latency from analysis time. A failed job marks its portfolio `failed` with a reason instead of leaving it stuck.
+- **Factor data comes from Ken French's data library.** The daily Fama-French five factors and momentum are downloaded as CSV zips into a shared `factor_returns` table and refreshed at most weekly. A failed download keeps the stored data and retries within the hour.
 - **Market data is demand-driven and shared.** History is fetched lazily the first time a ticker appears, then only the gap since the last stored day. It lives once in a shared `prices` table, so storage grows with the number of distinct tickers held, not with the number of users. Latest prices sit in Redis with a 15 minute TTL.
 - **Refresh tokens rotate and can be revoked.** They are opaque, stored hashed, and replaced on every use. Reusing an old one revokes the whole family.
 - **Least privilege by default.** Each service has its own IAM roles (the api can only write to the bucket, the worker can only read from it), only the load balancer is reachable from the internet, and secrets are injected from SSM at task start.
