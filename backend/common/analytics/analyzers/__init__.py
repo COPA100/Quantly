@@ -13,6 +13,11 @@ from common.analytics.analyzers import (
     overview,
     performance,
     stress,
+    factors,
+    insights,
+    overview,
+    performance,
+    risk_contrib,
     var,
     var_suite,
 )
@@ -29,6 +34,8 @@ REGISTRY: list[Analyzer] = [
     stress.stress,
     var_suite.var_suite,
     frontier.frontier,
+    factors.factors,
+    risk_contrib.risk_contribution,
 ]
 
 __all__ = ["REGISTRY", "Analyzer", "analyzer", "run_analyzers"]

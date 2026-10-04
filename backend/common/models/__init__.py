@@ -1,4 +1,5 @@
 from common.models.analytics_result import AnalyticsResult
+from common.models.factor_return import FactorFetch, FactorReturn
 from common.models.holding import Holding
 from common.models.job import Job
 from common.models.portfolio import Portfolio, PortfolioStatus
@@ -9,6 +10,8 @@ from common.models.user import User
 
 __all__ = [
     "AnalyticsResult",
+    "FactorFetch",
+    "FactorReturn",
     "Holding",
     "Job",
     "Portfolio",
