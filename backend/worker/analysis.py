@@ -3,10 +3,12 @@ import math
 from datetime import date
 from typing import Any
 
-import numpy as np
+import pandas as pd
 
-from common.analytics import accelerated, basic, insights, metrics
-from common.analytics.returns import daily_returns
+from common.analytics import basic
+from common.analytics.analyzers import REGISTRY, run_analyzers
+from common.analytics.context import AnalysisContext
+from common.config import get_settings
 from common.csv_reader import parse_portfolio
 from common.market_data import ensure_benchmark, ensure_history, get_current_prices
 from common.models import Portfolio, Price
@@ -14,89 +16,80 @@ from common.storage import get_storage
 from worker.cache import get_cached, holdings_digest, set_cached
 
 
-def _adj_closes(prices: list[Price]) -> np.ndarray:
-    # adjusted close where present, raw close otherwise
-    return np.array(
-        [p.adj_close if p.adj_close is not None else p.close for p in prices], dtype=float
-    )
+def _adj_close(prices: list[Price]) -> pd.Series:
+    # adjusted close where present, raw close otherwise, indexed by date
+    return pd.Series(
+        [p.adj_close if p.adj_close is not None else p.close for p in prices],
+        index=pd.Index([p.date for p in prices], name="date"),
+        dtype=float,
+    ).sort_index()
 
 
-def _weighted_returns(
-    positions: list[dict], returns_by_ticker: dict[str, np.ndarray], total: float
-) -> np.ndarray:
-    # portfolio daily returns = value-weighted sum of the holdings' returns,
-    # aligned on the most recent overlapping window
-    if total <= 0:
-        return np.empty(0)
+def window_start(as_of: date, years: int) -> date:
+    return (pd.Timestamp(as_of) - pd.DateOffset(years=years)).date()
 
+
+def _weights(positions: list[dict], total: float) -> pd.Series:
     weights: dict[str, float] = {}
-    for p in positions:
-        symbol = str(p["symbol"]).upper()
-        value = p["quantity"] * p["current_price"]
-        weights[symbol] = weights.get(symbol, 0.0) + value / total
+    if total > 0:
+        for p in positions:
+            symbol = str(p["symbol"]).upper()
+            weights[symbol] = weights.get(symbol, 0.0) + p["quantity"] * p["current_price"] / total
+    return pd.Series(weights, dtype=float)
 
-    series = [(t, r) for t, r in returns_by_ticker.items() if r.size > 0]
+
+def aligned_prices(closes: dict[str, pd.Series]) -> pd.DataFrame:
+    # keep only the days every series has a price for. a holding that skipped a
+    # day drops that day for everyone, so each return row spans the same dates.
+    series = {t: s for t, s in closes.items() if not s.empty}
     if not series:
-        return np.empty(0)
-
-    n = min(r.size for _, r in series)
-    aligned = np.zeros(n)
-    for ticker, r in series:
-        aligned += weights.get(ticker, 0.0) * r[-n:]
-    return aligned
+        return pd.DataFrame()
+    return pd.concat(series, axis=1, join="inner").sort_index()
 
 
-def _equity_curve(positions: list[dict], history_by_ticker: dict[str, list[Price]]) -> dict:
-    # portfolio market value over time = sum(shares * close), on the dates every
-    # holding has a price for. this is the series the frontend charts.
-    shares_by_ticker: dict[str, float] = {}
-    for p in positions:
-        symbol = str(p["symbol"]).upper()
-        shares_by_ticker[symbol] = shares_by_ticker.get(symbol, 0.0) + float(p["quantity"])
+def build_context(
+    db, positions: list[dict], as_of: date, history: dict[str, list[Price]], benchmark: list[Price]
+) -> AnalysisContext:
+    settings = get_settings()
+    start = window_start(as_of, settings.analysis_window_years)
 
-    closes_by_ticker: dict[str, dict] = {}
-    date_sets: list[set] = []
-    for ticker, prices in history_by_ticker.items():
-        closes = {pr.date: pr.close for pr in prices if pr.close is not None}
-        if closes:
-            closes_by_ticker[ticker] = closes
-            date_sets.append(set(closes))
-    if not date_sets:
-        return {"dates": [], "values": []}
+    total = basic.calculate_portfolio_total(positions)
+    basic.calculate_position_allocation(positions)
+    weights = _weights(positions, total)
 
-    common = sorted(set.intersection(*date_sets))
-    dates = [d.isoformat() for d in common]
-    values = [
-        round(
-            sum(shares_by_ticker.get(t, 0.0) * closes_by_ticker[t][d] for t in closes_by_ticker), 2
-        )
-        for d in common
-    ]
-    return {"dates": dates, "values": values}
+    full = {t: _adj_close(bars) for t, bars in history.items()}
+    window = {t: [b for b in bars if b.date >= start] for t, bars in history.items()}
+    prices = aligned_prices({t: _adj_close(bars) for t, bars in window.items()})
+    returns = prices.pct_change().iloc[1:]
 
-
-# monthly 95% VaR. fixed seed keeps the result deterministic so the analytics
-# cache (keyed by holdings+as-of) stays stable across re-runs.
-VAR_HORIZON_DAYS = 21
-VAR_SIMULATIONS = 20000
-VAR_CONFIDENCE = 0.95
-VAR_SEED = 0
-
-
-def _value_at_risk(portfolio_returns: np.ndarray) -> dict:
-    if portfolio_returns.size < 2:
-        return {
-            "horizon_days": VAR_HORIZON_DAYS,
-            "confidence": VAR_CONFIDENCE,
-            "var": 0.0,
-            "cvar": 0.0,
-        }
-    mu = float(np.mean(portfolio_returns))
-    sigma = float(np.std(portfolio_returns, ddof=1))
-    result = accelerated.monte_carlo_var(
-        mu, sigma, VAR_HORIZON_DAYS, VAR_SIMULATIONS, VAR_CONFIDENCE, VAR_SEED
+    # a holding with no history contributes nothing, its weight is not spread
+    # over the others
+    portfolio_returns = (
+        returns.mul(weights.reindex(returns.columns).fillna(0.0), axis=1).sum(axis=1)
+        if not returns.empty
+        else pd.Series(dtype=float)
     )
-    return {"horizon_days": VAR_HORIZON_DAYS, "confidence": VAR_CONFIDENCE, **result}
+
+    bench_bars = [b for b in benchmark if b.date >= start]
+    bench_returns = _adj_close(bench_bars).pct_change().iloc[1:]
+    if not portfolio_returns.empty:
+        bench_returns = bench_returns[bench_returns.index.isin(portfolio_returns.index)]
+
+    full[settings.benchmark_ticker] = _adj_close(benchmark)
+    return AnalysisContext(
+        as_of=as_of,
+        positions=positions,
+        total=total,
+        weights=weights,
+        prices=prices,
+        returns=returns,
+        portfolio_returns=portfolio_returns,
+        benchmark_returns=bench_returns,
+        history=window,
+        full_history=full,
+        benchmark_ticker=settings.benchmark_ticker,
+        db=db,
+    )
 
 
 def _json_safe(value: Any) -> Any:
@@ -111,8 +104,8 @@ def _json_safe(value: Any) -> Any:
 
 
 def compute_analytics(db, portfolio: Portfolio, as_of: date | None = None) -> dict[str, Any]:
-    # download the raw csv, value it at current prices, and compute the full
-    # metric set from the shared price history. returns metric_name -> value.
+    # download the raw csv, value it at current prices, build the shared context
+    # once, then run every registered analyzer over it. returns metric_name -> value.
     as_of = as_of or date.today()
 
     raw = get_storage().download_bytes(portfolio.s3_key)
@@ -131,63 +124,12 @@ def compute_analytics(db, portfolio: Portfolio, as_of: date | None = None) -> di
     for p in positions:
         p["current_price"] = current.get(str(p["symbol"]).upper(), p["purchase_price"])
 
-    total = basic.calculate_portfolio_total(positions)
-    gain_loss = basic.calculate_portfolio_gainloss(positions)
-    basic.calculate_position_allocation(positions)
-    allocation = [
-        {"ticker": str(p["symbol"]).upper(), "pct_allocation": p.get("pct_allocation", 0.0)}
-        for p in positions
-    ]
-
-    # per-ticker daily returns from the shared price table
-    returns_by_ticker: dict[str, np.ndarray] = {}
-    history_by_ticker: dict[str, list[Price]] = {}
-    for ticker in dict.fromkeys(tickers):  # dedupe, preserve order
-        history = ensure_history(db, ticker, as_of=as_of)
-        history_by_ticker[ticker] = history
-        returns_by_ticker[ticker] = daily_returns(_adj_closes(history))
-
-    portfolio_returns = _weighted_returns(positions, returns_by_ticker, total)
-    bench_returns = daily_returns(_adj_closes(ensure_benchmark(db, as_of=as_of)))
-
-    # drawdown, the correlation kernel, and VaR run in the c++ engine when it is
-    # installed, and fall back to numpy otherwise
-    corr = accelerated.correlation_matrix(returns_by_ticker)
-    avg_corr = metrics.average_correlation(corr["matrix"])
-    vol = metrics.annualized_volatility(portfolio_returns)
-    sharpe = metrics.sharpe_ratio(portfolio_returns)
-    sortino = metrics.sortino_ratio(portfolio_returns)
-    drawdown = accelerated.max_drawdown(portfolio_returns)
-    beta = metrics.beta(portfolio_returns, bench_returns)
-    var = _value_at_risk(portfolio_returns)
-
-    weights_sorted = sorted((p.get("pct_allocation", 0.0) for p in positions), reverse=True)
-    top_n = min(3, len(weights_sorted))
-    top_weight = sum(weights_sorted[:top_n])
-
-    results = {
-        "value": {"total": round(total, 2)},
-        "gain_loss": gain_loss,
-        "allocation": {"positions": allocation},
-        "volatility": {"annualized": vol},
-        "returns": {"annualized": metrics.annualized_return(portfolio_returns)},
-        "sharpe": {"ratio": sharpe},
-        "sortino": {"ratio": sortino},
-        "drawdown": drawdown,
-        "beta": {"beta": beta},
-        "var": var,
-        "equity_curve": _equity_curve(positions, history_by_ticker),
-        "correlation": {"tickers": corr["tickers"], "matrix": corr["matrix"], "average": avg_corr},
-        "insights": {
-            "volatility": insights.volatility_insight(vol),
-            "drawdown": insights.drawdown_insight(drawdown["max_drawdown"]),
-            "sharpe": insights.sharpe_insight(sharpe),
-            "sortino": insights.sortino_insight(sortino),
-            "beta": insights.beta_insight(beta),
-            "correlation": insights.correlation_insight(len(returns_by_ticker), avg_corr),
-            "concentration": insights.concentration_insight(top_weight, top_n),
-        },
+    history = {
+        ticker: ensure_history(db, ticker, as_of=as_of)
+        for ticker in dict.fromkeys(tickers)  # dedupe, preserve order
     }
-    results = _json_safe(results)
+    ctx = build_context(db, positions, as_of, history, ensure_benchmark(db, as_of=as_of))
+
+    results = _json_safe(run_analyzers(ctx, REGISTRY))
     set_cached(digest, results)
     return results

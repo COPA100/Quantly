@@ -46,6 +46,8 @@ class Settings(BaseSettings):
 
     # how many years of daily history to keep per ticker
     history_years: int = 5
+    # metrics are computed over this trailing window of the stored history
+    analysis_window_years: int = 5
 
     # market benchmark used for beta, just another shared ticker
     benchmark_ticker: str = "SPY"
