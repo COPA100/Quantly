@@ -7,7 +7,6 @@ import PerformanceSection from './components/sections/PerformanceSection'
 import StressSection from './components/sections/StressSection'
 import VarSection from './components/sections/VarSection'
 import FactorSection from './components/sections/FactorSection'
-import PerformanceSection from './components/sections/PerformanceSection'
 import RiskContributionSection from './components/sections/RiskContributionSection'
 import type { Analytics } from './lib/types'
 

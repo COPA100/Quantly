@@ -8,16 +8,13 @@ order, and an analyzer can read the results of the ones before it through
 from common.analytics.analyzers import (
     correlation,
     equity_curve,
+    factors,
     frontier,
     insights,
     overview,
     performance,
-    stress,
-    factors,
-    insights,
-    overview,
-    performance,
     risk_contrib,
+    stress,
     var,
     var_suite,
 )
