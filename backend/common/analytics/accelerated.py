@@ -9,6 +9,7 @@ the correlation kernel, Monte Carlo VaR); the rest stay in numpy.
 import numpy as np
 
 from common.analytics import metrics, risk
+from common.config import get_settings
 
 try:
     import engine as _engine
@@ -36,7 +37,7 @@ def correlation_matrix(returns_by_ticker: dict) -> dict:
         return metrics.correlation_matrix(returns_by_ticker)
 
     stacked = np.ascontiguousarray(np.vstack([s[-n:] for s in series]))
-    matrix = _engine.correlation_matrix(stacked)
+    matrix = _engine.correlation_matrix(stacked, threads=get_settings().engine_threads)
     return {"tickers": tickers, "matrix": matrix.tolist()}
 
 
@@ -50,4 +51,6 @@ def monte_carlo_var(
 ) -> dict:
     if _engine is None:
         return risk.monte_carlo_var(mu, sigma, horizon, n_sims, confidence, seed)
-    return _engine.monte_carlo_var(mu, sigma, horizon, n_sims, confidence, seed)
+    return _engine.monte_carlo_var(
+        mu, sigma, horizon, n_sims, confidence, seed, threads=get_settings().engine_threads
+    )

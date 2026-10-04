@@ -29,3 +29,25 @@ def test_correlation_is_identical_for_any_thread_count():
 def test_non_finite_moments_raise():
     with pytest.raises(ValueError):
         engine.monte_carlo_var(0.0, float("nan"), 21, 1000, 0.95, 1)
+
+
+def test_accelerated_passes_the_configured_thread_count(monkeypatch):
+    import common.analytics.accelerated as accelerated
+    from common.config import get_settings
+
+    seen = {}
+
+    class Fake:
+        def monte_carlo_var(self, *args, threads):
+            seen["var"] = threads
+            return {"var": 0.0, "cvar": 0.0}
+
+        def correlation_matrix(self, data, threads):
+            seen["corr"] = threads
+            return np.eye(len(data))
+
+    monkeypatch.setattr(accelerated, "_engine", Fake())
+    monkeypatch.setattr(get_settings(), "engine_threads", 3)
+    accelerated.monte_carlo_var(0.0, 0.01, 21, 100)
+    accelerated.correlation_matrix({"A": np.arange(5.0), "B": np.arange(5.0) ** 2})
+    assert seen == {"var": 3, "corr": 3}

@@ -51,6 +51,10 @@ class Settings(BaseSettings):
     # metrics are computed over this trailing window of the stored history
     analysis_window_years: int = 5
 
+    # threads per c++ kernel call. the worker already runs one process per core,
+    # so 1 avoids oversubscribing; raise it for a single-process deployment.
+    engine_threads: int = 1
+
     # market benchmark used for beta, just another shared ticker
     benchmark_ticker: str = "SPY"
 
