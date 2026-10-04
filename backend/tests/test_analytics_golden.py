@@ -105,7 +105,9 @@ def test_analytics_output_matches_snapshot(monkeypatch):
     expected = json.loads(SNAPSHOT.read_text())
     # round-trip through json so tuples, ints vs floats etc. compare like stored results
     actual = json.loads(json.dumps(compute(monkeypatch)))
-    _assert_close(actual, expected)
+    # new analyzers add keys; the ones pinned here must not change
+    assert set(expected) <= set(actual)
+    _assert_close({k: actual[k] for k in expected}, expected)
 
 
 if __name__ == "__main__":

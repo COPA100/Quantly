@@ -125,7 +125,7 @@ def test_task_completes_and_persists_every_metric(wired):
     assert job.started_at is not None
     assert job.finished_at is not None
     rows = db.query(AnalyticsResult).filter_by(portfolio_id=pid).all()
-    assert {r.metric_name for r in rows} == METRIC_NAMES
+    assert METRIC_NAMES <= {r.metric_name for r in rows}
     db.close()
 
 
@@ -162,7 +162,9 @@ def test_identical_portfolio_reuses_cached_analytics(wired):
     # the second portfolio still gets its own persisted rows
     db = session_factory()
     assert db.get(Portfolio, pid2).status == PortfolioStatus.COMPLETE
-    assert db.query(AnalyticsResult).filter_by(portfolio_id=pid2).count() == len(METRIC_NAMES)
+    first = {r.metric_name for r in db.query(AnalyticsResult).filter_by(portfolio_id=pid1)}
+    second = {r.metric_name for r in db.query(AnalyticsResult).filter_by(portfolio_id=pid2)}
+    assert METRIC_NAMES <= second == first
     db.close()
 
 
