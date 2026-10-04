@@ -38,6 +38,7 @@ Beyond current value and gain/loss, Quantly surfaces risk and diversification in
 | Beta | How hard do I swing relative to the market? |
 | Monte Carlo VaR | What does a bad month look like? |
 | Allocation, concentration | How exposed am I to a handful of names? |
+| Historical stress tests | How would this exact portfolio have done in 2008, 2020 and 2022? Holdings without that history are estimated from beta. |
 
 It is a diagnostic tool. It does not recommend trades or execute them.
 

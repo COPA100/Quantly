@@ -3,6 +3,7 @@ import PortfolioOverview from './components/PortfolioOverview'
 import RiskInsights from './components/RiskInsights'
 import CorrelationSection from './components/sections/CorrelationSection'
 import PerformanceSection from './components/sections/PerformanceSection'
+import StressSection from './components/sections/StressSection'
 import type { Analytics } from './lib/types'
 
 export interface AnalyticsSection {
@@ -19,4 +20,5 @@ export const SECTIONS: AnalyticsSection[] = [
   { key: 'performance', component: PerformanceSection },
   { key: 'risk', component: RiskInsights },
   { key: 'correlation', component: CorrelationSection },
+  { key: 'stress', component: StressSection },
 ]
