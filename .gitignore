@@ -43,3 +43,10 @@ VALUE.md
 
 # editor settings
 .vscode/
+.hypothesis/
+coverage.xml
+e2e/node_modules/
+e2e/test-results/
+e2e/playwright-report/
+fuzz/corpus/
+fuzz/artifacts/
