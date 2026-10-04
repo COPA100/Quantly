@@ -40,6 +40,7 @@ Beyond current value and gain/loss, Quantly surfaces risk and diversification in
 | VaR method comparison + backtest | Do historical, normal, Cornish-Fisher and Monte Carlo VaR agree, and did the forecast hold up over the last two years? |
 | Allocation, concentration | How exposed am I to a handful of names? |
 | Historical stress tests | How would this exact portfolio have done in 2008, 2020 and 2022? Holdings without that history are estimated from beta. |
+| Efficient frontier | Could a different mix of these holdings have earned more for the same risk? |
 
 It is a diagnostic tool. It does not recommend trades or execute them.
 
