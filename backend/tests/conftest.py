@@ -1,4 +1,5 @@
 import pytest
+import requests
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -25,3 +26,13 @@ def db_session(db_engine):
     session.close()
     transaction.rollback()
     connection.close()
+
+
+@pytest.fixture(autouse=True)
+def no_network(monkeypatch):
+    # tests never hit the network. code that downloads (e.g. french factor
+    # data) sees an outage unless a test mocks the call itself.
+    def refuse(*args, **kwargs):
+        raise requests.ConnectionError("network disabled in tests")
+
+    monkeypatch.setattr(requests, "get", refuse)
