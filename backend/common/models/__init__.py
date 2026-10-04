@@ -4,6 +4,7 @@ from common.models.job import Job
 from common.models.portfolio import Portfolio, PortfolioStatus
 from common.models.price import Price
 from common.models.refresh_token import RefreshToken
+from common.models.ticker_meta import TickerMeta
 from common.models.user import User
 
 __all__ = [
@@ -14,5 +15,6 @@ __all__ = [
     "PortfolioStatus",
     "Price",
     "RefreshToken",
+    "TickerMeta",
     "User",
 ]

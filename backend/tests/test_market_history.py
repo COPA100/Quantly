@@ -1,9 +1,11 @@
 from datetime import date
 
+import pytest
 from sqlalchemy import select
 
 import common.market_data.history as history
-from common.models import Price
+from common.config import get_settings
+from common.models import Price, TickerMeta
 
 
 def bar(day: date, close: float = 1.0) -> dict:
@@ -81,3 +83,51 @@ def test_invalid_ticker_stores_nothing(db_session, monkeypatch):
     result = history.ensure_history(db_session, "BADX", as_of=date(2026, 7, 22))
     assert result == []
     assert history.latest_stored_date(db_session, "BADX") is None
+
+
+def test_first_refresh_marks_ticker_backfilled(db_session, monkeypatch):
+    monkeypatch.setattr(history, "fetch_history", lambda t, start=None: [bar(date(2026, 7, 20))])
+    history.refresh_history(db_session, "AAPL")
+    db_session.flush()
+    meta = db_session.get(TickerMeta, "AAPL")
+    assert meta.backfilled_from == get_settings().history_start
+
+
+def test_backfill_fetches_only_the_missing_front_once(db_session, monkeypatch):
+    # stored before the history start moved back: only the last few years exist
+    db_session.add(Price(ticker="AAPL", date=date(2021, 10, 1), close=1.0))
+    db_session.flush()
+    calls = []
+
+    def fake_fetch(ticker, start=None, end=None):
+        calls.append((start, end))
+        # yahoo end is exclusive, but return the boundary anyway to test the guard
+        return [bar(date(2007, 1, 3)), bar(date(2021, 10, 1), 9.0)]
+
+    monkeypatch.setattr(history, "fetch_history", fake_fetch)
+
+    assert history.backfill_history(db_session, "AAPL") == 1
+    assert calls == [(get_settings().history_start, date(2021, 10, 1))]
+    assert history.earliest_stored_date(db_session, "AAPL") == date(2007, 1, 3)
+
+    # already done, no second fetch
+    assert history.backfill_history(db_session, "AAPL") == 0
+    assert len(calls) == 1
+
+
+def test_backfill_marks_young_ticker_done_even_without_older_bars(db_session, monkeypatch):
+    # listed after the history start: yahoo has nothing older, don't ask again
+    db_session.add(Price(ticker="NEWCO", date=date(2024, 5, 1), close=1.0))
+    db_session.flush()
+    calls = []
+    monkeypatch.setattr(
+        history, "fetch_history", lambda t, start=None, end=None: calls.append(1) or []
+    )
+    history.backfill_history(db_session, "NEWCO")
+    history.backfill_history(db_session, "NEWCO")
+    assert len(calls) == 1
+
+
+def test_backfill_skips_ticker_with_no_data(db_session, monkeypatch):
+    monkeypatch.setattr(history, "fetch_history", lambda *a, **k: pytest.fail("no fetch"))
+    assert history.backfill_history(db_session, "BADX") == 0

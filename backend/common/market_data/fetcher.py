@@ -46,14 +46,16 @@ def _num(value) -> float | None:
     return None if pd.isna(value) else float(value)
 
 
-def fetch_history(ticker: str, start: date | None = None) -> list[dict]:
-    # daily bars from yahoo, full retention window by default or since `start`
-    tk = yf.Ticker(ticker)
+def fetch_history(ticker: str, start: date | None = None, end: date | None = None) -> list[dict]:
+    # daily bars from yahoo, from `start` (default: the configured history
+    # start) up to but not including `end` (default: today)
+    start = start or get_settings().history_start
     try:
-        if start is None:
-            hist = tk.history(period=f"{get_settings().history_years}y", auto_adjust=False)
-        else:
-            hist = tk.history(start=start.isoformat(), auto_adjust=False)
+        hist = yf.Ticker(ticker).history(
+            start=start.isoformat(),
+            end=end.isoformat() if end is not None else None,
+            auto_adjust=False,
+        )
     except Exception:
         # invalid/delisted ticker or a transient yahoo error, treated as no data
         return []

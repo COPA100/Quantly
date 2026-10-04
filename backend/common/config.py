@@ -1,3 +1,4 @@
+from datetime import date
 from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -44,8 +45,9 @@ class Settings(BaseSettings):
     # book's metrics only change when prices roll over to the next day.
     analytics_cache_ttl_seconds: int = 86400
 
-    # how many years of daily history to keep per ticker
-    history_years: int = 5
+    # daily history is fetched back to this date for every ticker (or its
+    # listing, if later). deep history feeds stress tests of past crises.
+    history_start: date = date(2007, 1, 1)
     # metrics are computed over this trailing window of the stored history
     analysis_window_years: int = 5
 
