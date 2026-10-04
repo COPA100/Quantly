@@ -64,6 +64,15 @@ services:
       # sweeper threshold, lowered by the chaos run so stuck jobs recover quickly
       QUANTLY_STUCK_AFTER_SECONDS: ${QUANTLY_STUCK_AFTER_SECONDS:-900}
       QUANTLY_SWEEPER_INTERVAL_SECONDS: ${QUANTLY_SWEEPER_INTERVAL_SECONDS:-60}
+      # observability is off unless QUANTLY_OTEL_ENABLED=true is set, see README
+      QUANTLY_OTEL_ENABLED: ${QUANTLY_OTEL_ENABLED:-false}
+      QUANTLY_OTEL_EXPORTER_ENDPOINT: http://otel-collector:4318
+      # prefork children write metrics here, the parent serves them on :9100
+      PROMETHEUS_MULTIPROC_DIR: /tmp/prom
+    tmpfs:
+      - /tmp/prom
+    ports:
+      - "9100:9100"
 
   # celery beat: schedules the outbox relay and the stuck-portfolio sweeper.
   # run exactly one of these, a second would only duplicate (harmless) sends.
@@ -88,15 +97,6 @@ services:
       QUANTLY_CELERY_BROKER_URL: redis://redis:6379/1
       QUANTLY_CELERY_RESULT_BACKEND: redis://redis:6379/2
       QUANTLY_SWEEPER_INTERVAL_SECONDS: ${QUANTLY_SWEEPER_INTERVAL_SECONDS:-60}
-      # observability is off unless QUANTLY_OTEL_ENABLED=true is set, see README
-      QUANTLY_OTEL_ENABLED: ${QUANTLY_OTEL_ENABLED:-false}
-      QUANTLY_OTEL_EXPORTER_ENDPOINT: http://otel-collector:4318
-      # prefork children write metrics here, the parent serves them on :9100
-      PROMETHEUS_MULTIPROC_DIR: /tmp/prom
-    tmpfs:
-      - /tmp/prom
-    ports:
-      - "9100:9100"
 
   # ---- observability stack, off by default: docker compose --profile obs up ----
   otel-collector:
