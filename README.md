@@ -67,7 +67,7 @@ flowchart LR
     browser -- "HTTPS + JWT" --> alb --> api
     api -- "store CSV" --> s3
     api -- "rows, job status" --> rds
-    api -- "enqueue job" --> redis
+    api -- "job via outbox relay" --> redis
     redis -- "deliver job" --> worker
     worker -- "status updates (pub/sub)" --> redis
     api -- "SSE status stream" --> browser
@@ -79,7 +79,7 @@ flowchart LR
 ### Request lifecycle
 
 1. The user signs in with email and password, or with Google. Either way the API issues its own short-lived access JWT plus a rotating refresh token, so nothing downstream ever sees a Google token.
-2. They upload a CSV. The API validates it, stores the raw file in S3, writes the holdings to Postgres, enqueues an analysis job on Redis, and returns `202 Accepted` straight away.
+2. They upload a CSV. The API validates it, stores the raw file in S3, writes the holdings, a job and an outbox row to Postgres in one transaction, and returns `202 Accepted` straight away. A Celery beat task relays the outbox row to Redis.
 3. A Celery worker picks the job up, fetches whatever price history it is missing, computes the metrics, and writes the results back to Postgres.
 4. The worker publishes each status change to a Redis channel for that portfolio. The frontend holds a Server-Sent Events stream open (`GET /portfolios/{id}/events`). The api sends the current status first, then relays those changes until the analysis completes or fails, and renders the charts and insight cards. If the stream can't be opened or drops early, it falls back to polling `/status`.
 
@@ -88,6 +88,10 @@ flowchart LR
 - **Two services, not one.** The api is small, stateless and latency-sensitive. The worker is CPU-bound and bursty. They are deployed, sized and scaled independently (0.25 vCPU on Fargate against 1 vCPU on Fargate Spot), so a heavy analysis never slows a request down.
 - **Uploads never block on compute.** The queue decouples upload latency from analysis time. A failed job marks its portfolio `failed` with a reason instead of leaving it stuck.
 - **Factor data comes from Ken French's data library.** The daily Fama-French five factors and momentum are downloaded as CSV zips into a shared `factor_returns` table and refreshed at most weekly. A failed download keeps the stored data and retries within the hour.
+- **The outbox closes the commit-then-enqueue gap.** The upload writes the portfolio, its job and an `outbox` row in one transaction. A beat task (every 2 seconds) publishes unpublished rows with `SELECT ... FOR UPDATE SKIP LOCKED` and marks them published. The api never talks to the broker, so a broker outage or a crash after commit cannot lose an accepted upload. Delivery is at-least-once, and the Celery task id is derived from the job id, so a re-sent row is the same task. The alternative, enqueueing after commit and relying on the outbox only as a fallback, saves up to two seconds but gives two publish paths to reason about. A sweeper re-announces any portfolio idle in `pending` or `processing` longer than 15 minutes.
+- **Analysis is idempotent under redelivery.** Celery with `acks_late` can deliver a task twice. Each portfolio has a Redis lock (`SET NX PX`, random token, renewed by a heartbeat thread, released by a compare-and-delete Lua script). A second delivery while the lock is held returns `duplicate` and does nothing, and a delivery for a finished job returns `already_done`. The lock alone is not enough, since a paused worker can outlive its lock, so each run also writes a run token onto the job and its result write is a conditional update on that token. A stale run matches no row and writes nothing.
+- **Failures are classified.** Transient errors (network, timeouts, Redis connection errors, database operational errors, yfinance rate limits) retry up to 4 attempts with exponential backoff and jitter, and the portfolio stays `processing` while the job shows `retrying` and its attempt count. Permanent errors (bad CSV, missing portfolio) and unrecognized errors fail immediately. A job that exhausts its retries is marked failed and its details are pushed to the Redis list `dlq:analysis`. `python -m scripts.dlq list` shows it and `python -m scripts.dlq requeue --all` sends it back through the outbox.
+- **Rate limits use a sliding window.** Upload (per user) and login (per client IP) are limited by one Lua script over a sorted set of request times, so the check and the record are atomic across api replicas and the clock is Redis's. It is exact where a fixed window lets through double the limit at a boundary, and memory is bounded by the limit. Over the limit returns `429` with `Retry-After`. If Redis is down, login fails open so nobody is locked out, and upload fails closed (`503`) because it costs storage and a worker job. Limits are `QUANTLY_RATE_LIMIT_*` settings.
 - **Market data is demand-driven and shared.** History is fetched lazily the first time a ticker appears, then only the gap since the last stored day. It lives once in a shared `prices` table, so storage grows with the number of distinct tickers held, not with the number of users. Latest prices sit in Redis with a 15 minute TTL.
 - **Refresh tokens rotate and can be revoked.** They are opaque, stored hashed, and replaced on every use. Reusing an old one revokes the whole family.
 - **Least privilege by default.** Each service has its own IAM roles (the api can only write to the bucket, the worker can only read from it), only the load balancer is reachable from the internet, and secrets are injected from SSM at task start.
@@ -124,9 +128,9 @@ Numbers are from one machine (Python 3.14.0, NumPy 2.3.4). The ratios are the po
 ```
 backend/
   api/          FastAPI app: routers, schemas, auth, dependencies
-  worker/       Celery app and the analysis task
+  worker/       Celery app, the analysis task, outbox relay and sweeper
   common/       shared by both: models, config, market data, analytics
-  scripts/      demo seed script
+  scripts/      demo seed, dead-letter tooling, chaos run
   tests/        pytest suite
 engine/         C++ sources, pybind11 bindings, Catch2 tests
 benchmarks/     C++ vs NumPy vs pure Python
@@ -140,7 +144,7 @@ example_csv/    sample brokerage exports to upload
 Everything runs locally for free. You need Docker, Python 3.13+ and a current Node LTS.
 
 ```bash
-# postgres, redis, s3mock (a local stand-in for s3) and the celery worker
+# postgres, redis, s3mock (a local stand-in for s3), the celery worker and beat
 docker compose up -d
 
 # api
@@ -248,6 +252,8 @@ Commands run from `infra/`. [infra/README.md](./infra/README.md) has the detail 
 ## Status
 
 The full path works end to end: auth, upload, async analysis, the insight layer, and the frontend. The infrastructure and deploy pipeline are written and validated, and are stood up on demand rather than left running.
+
+Reliability work (outbox, locks, retries, rate limits) is covered by unit tests with fakeredis. To exercise it against real containers, bring up the compose stack, run migrations and the api, then run `python -m scripts.chaos --count 20 --kills 4` from `backend/`. It uploads portfolios, kills or restarts the worker at random while they process, and checks that every portfolio ends terminal with exactly one set of analytics rows. The same run is the manual and nightly `chaos` workflow. No results are published here yet.
 
 Known gaps:
 
