@@ -6,6 +6,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 option(QUANTLY_BUILD_TESTS "Build the C++ unit tests instead of the python module" OFF)
 
+option(QUANTLY_SANITIZE "Build with AddressSanitizer and UndefinedBehaviorSanitizer" OFF)
+if(QUANTLY_SANITIZE)
+  add_compile_options(-fsanitize=address,undefined -fno-sanitize-recover=undefined
+                      -fno-omit-frame-pointer -g)
+  add_link_options(-fsanitize=address,undefined)
+endif()
+
 # pure-c++ compute, shared by the python module and the c++ unit tests. no
 # pybind/python dependency, so the tests build with a bare toolchain.
 add_library(quantly_core STATIC
