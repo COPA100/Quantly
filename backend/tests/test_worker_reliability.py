@@ -6,9 +6,13 @@ from test_worker_task import _drain, _listen, _seed_portfolio, wired  # noqa: F4
 
 import worker.cache as cache
 import worker.tasks as tasks
+from common.analytics.analyzers import REGISTRY
 from common.models import AnalyticsResult, Job, Portfolio, PortfolioStatus
 from common.outbox import task_id_for_job
 from worker.errors import PermanentError
+
+# one analytics row per result key every analyzer writes
+RESULT_KEYS = sum(len(a.keys) for a in REGISTRY)
 
 
 @pytest.fixture(autouse=True)
@@ -66,7 +70,7 @@ def test_redelivery_of_a_finished_job_is_a_noop(wired, monkeypatch):
     assert again.result["status"] == "already_done"
     assert calls["history"] == history
     db = session_factory()
-    assert db.query(AnalyticsResult).filter_by(portfolio_id=pid).count() == 13
+    assert db.query(AnalyticsResult).filter_by(portfolio_id=pid).count() == RESULT_KEYS
     assert db.get(Job, jid).attempts == 1
     db.close()
 
@@ -114,7 +118,7 @@ def test_transient_error_retries_then_succeeds(wired, monkeypatch):
     assert job.attempts == 3
     assert job.last_error is None
     assert db.get(Portfolio, pid).status == PortfolioStatus.COMPLETE
-    assert db.query(AnalyticsResult).filter_by(portfolio_id=pid).count() == 13
+    assert db.query(AnalyticsResult).filter_by(portfolio_id=pid).count() == RESULT_KEYS
     db.close()
 
     # portfolio stays processing across retries, the job shows the retrying state
