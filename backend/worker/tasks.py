@@ -11,6 +11,7 @@ from common.db import SessionLocal
 from common.events import publish_status
 from common.models import AnalyticsResult, Job, Portfolio, PortfolioStatus
 from common.redis_client import get_redis
+from common.telemetry import record_dlq
 from worker.analysis import compute_analytics
 from worker.celery_app import celery_app
 from worker.errors import backoff_seconds, is_transient
@@ -81,6 +82,7 @@ def _push_dlq(portfolio_id: int, job_id: int | None, task_id: str | None, exc: E
     }
     try:
         get_redis().lpush(DLQ_KEY, json.dumps(record))
+        record_dlq()
     except redis.RedisError:
         logger.error("could not push portfolio %s to the dlq", portfolio_id, exc_info=True)
 
