@@ -172,6 +172,7 @@ pip install ./engine
 ```bash
 make lint     # ruff, isort, black
 make test     # pytest
+cd frontend && npm test   # vitest
 ```
 
 | Workflow | Runs on | Does |
@@ -179,6 +180,7 @@ make test     # pytest
 | `lint`, `test` | every push and PR | ruff, isort, black, pytest |
 | `engine` | every push and PR | builds the C++ engine, runs its Catch2 tests, then pytest with the engine installed so the Python/C++ parity tests run |
 | `images` | PRs touching `backend/` | builds the api and worker images |
+| `frontend` | every push and PR | oxlint, type-check and build, vitest |
 | `terraform plan` | PRs touching `infra/` | fmt, validate, and a plan posted as a PR comment |
 | `deploy` | push to `main`, while enabled | pushes images to ECR, `terraform apply`, migrations, smoke test |
 
