@@ -1,0 +1,174 @@
+# error ratio recording rules and multiwindow burn-rate alerts, see docs/slo.md
+groups:
+  - name: quantly-slo-recording
+    interval: 30s
+    rules:
+      - record: slo:availability:error_ratio_rate5m
+        expr: sum(rate(quantly_http_request_duration_seconds_count{status=~"5.."}[5m])) / sum(rate(quantly_http_request_duration_seconds_count[5m]))
+      - record: slo:availability:error_ratio_rate30m
+        expr: sum(rate(quantly_http_request_duration_seconds_count{status=~"5.."}[30m])) / sum(rate(quantly_http_request_duration_seconds_count[30m]))
+      - record: slo:availability:error_ratio_rate1h
+        expr: sum(rate(quantly_http_request_duration_seconds_count{status=~"5.."}[1h])) / sum(rate(quantly_http_request_duration_seconds_count[1h]))
+      - record: slo:availability:error_ratio_rate2h
+        expr: sum(rate(quantly_http_request_duration_seconds_count{status=~"5.."}[2h])) / sum(rate(quantly_http_request_duration_seconds_count[2h]))
+      - record: slo:availability:error_ratio_rate6h
+        expr: sum(rate(quantly_http_request_duration_seconds_count{status=~"5.."}[6h])) / sum(rate(quantly_http_request_duration_seconds_count[6h]))
+      - record: slo:availability:error_ratio_rate1d
+        expr: sum(rate(quantly_http_request_duration_seconds_count{status=~"5.."}[1d])) / sum(rate(quantly_http_request_duration_seconds_count[1d]))
+      - record: slo:availability:error_ratio_rate3d
+        expr: sum(rate(quantly_http_request_duration_seconds_count{status=~"5.."}[3d])) / sum(rate(quantly_http_request_duration_seconds_count[3d]))
+      - record: slo:upload_latency:error_ratio_rate5m
+        expr: 1 - (sum(rate(quantly_http_request_duration_seconds_bucket{method="POST",route="/portfolios",le="0.3"}[5m])) / sum(rate(quantly_http_request_duration_seconds_count{method="POST",route="/portfolios"}[5m])))
+      - record: slo:upload_latency:error_ratio_rate30m
+        expr: 1 - (sum(rate(quantly_http_request_duration_seconds_bucket{method="POST",route="/portfolios",le="0.3"}[30m])) / sum(rate(quantly_http_request_duration_seconds_count{method="POST",route="/portfolios"}[30m])))
+      - record: slo:upload_latency:error_ratio_rate1h
+        expr: 1 - (sum(rate(quantly_http_request_duration_seconds_bucket{method="POST",route="/portfolios",le="0.3"}[1h])) / sum(rate(quantly_http_request_duration_seconds_count{method="POST",route="/portfolios"}[1h])))
+      - record: slo:upload_latency:error_ratio_rate2h
+        expr: 1 - (sum(rate(quantly_http_request_duration_seconds_bucket{method="POST",route="/portfolios",le="0.3"}[2h])) / sum(rate(quantly_http_request_duration_seconds_count{method="POST",route="/portfolios"}[2h])))
+      - record: slo:upload_latency:error_ratio_rate6h
+        expr: 1 - (sum(rate(quantly_http_request_duration_seconds_bucket{method="POST",route="/portfolios",le="0.3"}[6h])) / sum(rate(quantly_http_request_duration_seconds_count{method="POST",route="/portfolios"}[6h])))
+      - record: slo:upload_latency:error_ratio_rate1d
+        expr: 1 - (sum(rate(quantly_http_request_duration_seconds_bucket{method="POST",route="/portfolios",le="0.3"}[1d])) / sum(rate(quantly_http_request_duration_seconds_count{method="POST",route="/portfolios"}[1d])))
+      - record: slo:upload_latency:error_ratio_rate3d
+        expr: 1 - (sum(rate(quantly_http_request_duration_seconds_bucket{method="POST",route="/portfolios",le="0.3"}[3d])) / sum(rate(quantly_http_request_duration_seconds_count{method="POST",route="/portfolios"}[3d])))
+      - record: slo:analysis_time:error_ratio_rate5m
+        expr: 1 - (sum(rate(quantly_job_duration_seconds_bucket{task="analyze_portfolio",le="60.0"}[5m])) / sum(rate(quantly_job_duration_seconds_count{task="analyze_portfolio"}[5m])))
+      - record: slo:analysis_time:error_ratio_rate30m
+        expr: 1 - (sum(rate(quantly_job_duration_seconds_bucket{task="analyze_portfolio",le="60.0"}[30m])) / sum(rate(quantly_job_duration_seconds_count{task="analyze_portfolio"}[30m])))
+      - record: slo:analysis_time:error_ratio_rate1h
+        expr: 1 - (sum(rate(quantly_job_duration_seconds_bucket{task="analyze_portfolio",le="60.0"}[1h])) / sum(rate(quantly_job_duration_seconds_count{task="analyze_portfolio"}[1h])))
+      - record: slo:analysis_time:error_ratio_rate2h
+        expr: 1 - (sum(rate(quantly_job_duration_seconds_bucket{task="analyze_portfolio",le="60.0"}[2h])) / sum(rate(quantly_job_duration_seconds_count{task="analyze_portfolio"}[2h])))
+      - record: slo:analysis_time:error_ratio_rate6h
+        expr: 1 - (sum(rate(quantly_job_duration_seconds_bucket{task="analyze_portfolio",le="60.0"}[6h])) / sum(rate(quantly_job_duration_seconds_count{task="analyze_portfolio"}[6h])))
+      - record: slo:analysis_time:error_ratio_rate1d
+        expr: 1 - (sum(rate(quantly_job_duration_seconds_bucket{task="analyze_portfolio",le="60.0"}[1d])) / sum(rate(quantly_job_duration_seconds_count{task="analyze_portfolio"}[1d])))
+      - record: slo:analysis_time:error_ratio_rate3d
+        expr: 1 - (sum(rate(quantly_job_duration_seconds_bucket{task="analyze_portfolio",le="60.0"}[3d])) / sum(rate(quantly_job_duration_seconds_count{task="analyze_portfolio"}[3d])))
+  - name: quantly-slo-burn-rate
+    rules:
+      - alert: AvailabilityBurnRate1H
+        expr: slo:availability:error_ratio_rate1h > 0.0144 and slo:availability:error_ratio_rate5m > 0.0144
+        labels:
+          severity: page
+          slo: availability
+        annotations:
+          summary: "availability budget burning at 14.4x or more (1h and 5m windows)"
+          description: "SLO 99.9% of api requests answered without a 5xx. At this rate the 30 day budget is gone in 2.08333 days."
+      - alert: AvailabilityBurnRate6H
+        expr: slo:availability:error_ratio_rate6h > 0.006 and slo:availability:error_ratio_rate30m > 0.006
+        labels:
+          severity: page
+          slo: availability
+        annotations:
+          summary: "availability budget burning at 6x or more (6h and 30m windows)"
+          description: "SLO 99.9% of api requests answered without a 5xx. At this rate the 30 day budget is gone in 5 days."
+      - alert: AvailabilityBurnRate1D
+        expr: slo:availability:error_ratio_rate1d > 0.003 and slo:availability:error_ratio_rate2h > 0.003
+        labels:
+          severity: ticket
+          slo: availability
+        annotations:
+          summary: "availability budget burning at 3x or more (1d and 2h windows)"
+          description: "SLO 99.9% of api requests answered without a 5xx. At this rate the 30 day budget is gone in 10 days."
+      - alert: AvailabilityBurnRate3D
+        expr: slo:availability:error_ratio_rate3d > 0.001 and slo:availability:error_ratio_rate6h > 0.001
+        labels:
+          severity: ticket
+          slo: availability
+        annotations:
+          summary: "availability budget burning at 1x or more (3d and 6h windows)"
+          description: "SLO 99.9% of api requests answered without a 5xx. At this rate the 30 day budget is gone in 30 days."
+      - alert: UploadLatencyBurnRate1H
+        expr: slo:upload_latency:error_ratio_rate1h > 0.072 and slo:upload_latency:error_ratio_rate5m > 0.072
+        labels:
+          severity: page
+          slo: upload_latency
+        annotations:
+          summary: "upload_latency budget burning at 14.4x or more (1h and 5m windows)"
+          description: "SLO 99.5% of uploads accepted in under 300 ms. At this rate the 30 day budget is gone in 2.08333 days."
+      - alert: UploadLatencyBurnRate6H
+        expr: slo:upload_latency:error_ratio_rate6h > 0.03 and slo:upload_latency:error_ratio_rate30m > 0.03
+        labels:
+          severity: page
+          slo: upload_latency
+        annotations:
+          summary: "upload_latency budget burning at 6x or more (6h and 30m windows)"
+          description: "SLO 99.5% of uploads accepted in under 300 ms. At this rate the 30 day budget is gone in 5 days."
+      - alert: UploadLatencyBurnRate1D
+        expr: slo:upload_latency:error_ratio_rate1d > 0.015 and slo:upload_latency:error_ratio_rate2h > 0.015
+        labels:
+          severity: ticket
+          slo: upload_latency
+        annotations:
+          summary: "upload_latency budget burning at 3x or more (1d and 2h windows)"
+          description: "SLO 99.5% of uploads accepted in under 300 ms. At this rate the 30 day budget is gone in 10 days."
+      - alert: UploadLatencyBurnRate3D
+        expr: slo:upload_latency:error_ratio_rate3d > 0.005 and slo:upload_latency:error_ratio_rate6h > 0.005
+        labels:
+          severity: ticket
+          slo: upload_latency
+        annotations:
+          summary: "upload_latency budget burning at 1x or more (3d and 6h windows)"
+          description: "SLO 99.5% of uploads accepted in under 300 ms. At this rate the 30 day budget is gone in 30 days."
+      - alert: AnalysisTimeBurnRate1H
+        expr: slo:analysis_time:error_ratio_rate1h > 0.72 and slo:analysis_time:error_ratio_rate5m > 0.72
+        labels:
+          severity: page
+          slo: analysis_time
+        annotations:
+          summary: "analysis_time budget burning at 14.4x or more (1h and 5m windows)"
+          description: "SLO 95% of analysis jobs finishing in under 60 s. At this rate the 30 day budget is gone in 2.08333 days."
+      - alert: AnalysisTimeBurnRate6H
+        expr: slo:analysis_time:error_ratio_rate6h > 0.3 and slo:analysis_time:error_ratio_rate30m > 0.3
+        labels:
+          severity: page
+          slo: analysis_time
+        annotations:
+          summary: "analysis_time budget burning at 6x or more (6h and 30m windows)"
+          description: "SLO 95% of analysis jobs finishing in under 60 s. At this rate the 30 day budget is gone in 5 days."
+      - alert: AnalysisTimeBurnRate1D
+        expr: slo:analysis_time:error_ratio_rate1d > 0.15 and slo:analysis_time:error_ratio_rate2h > 0.15
+        labels:
+          severity: ticket
+          slo: analysis_time
+        annotations:
+          summary: "analysis_time budget burning at 3x or more (1d and 2h windows)"
+          description: "SLO 95% of analysis jobs finishing in under 60 s. At this rate the 30 day budget is gone in 10 days."
+      - alert: AnalysisTimeBurnRate3D
+        expr: slo:analysis_time:error_ratio_rate3d > 0.05 and slo:analysis_time:error_ratio_rate6h > 0.05
+        labels:
+          severity: ticket
+          slo: analysis_time
+        annotations:
+          summary: "analysis_time budget burning at 1x or more (3d and 6h windows)"
+          description: "SLO 95% of analysis jobs finishing in under 60 s. At this rate the 30 day budget is gone in 30 days."
+  - name: quantly-health
+    rules:
+      - alert: ScrapeTargetDown
+        expr: up == 0
+        for: 5m
+        labels:
+          severity: page
+        annotations:
+          summary: "{{ $labels.job }} is not being scraped"
+      - alert: QueueBacklog
+        expr: quantly_queue_depth > 50
+        for: 10m
+        labels:
+          severity: ticket
+        annotations:
+          summary: "queue {{ $labels.queue }} has held more than 50 tasks for 10 minutes"
+      - alert: JobFailureRatio
+        expr: sum(rate(quantly_jobs_total{outcome="failure"}[15m])) / sum(rate(quantly_jobs_total[15m])) > 0.1
+        for: 15m
+        labels:
+          severity: ticket
+        annotations:
+          summary: "more than 10% of jobs failed over 15 minutes"
+      - alert: DeadLetterGrowing
+        expr: increase(quantly_dlq_total[1h]) > 0
+        labels:
+          severity: ticket
+        annotations:
+          summary: "jobs were dead lettered in the last hour"

@@ -1,0 +1,17 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - /etc/prometheus/alerts.yml
+
+scrape_configs:
+  # the api usually runs on the host (uvicorn), so reach it through the docker host
+  - job_name: quantly-api
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["host.docker.internal:8000"]
+
+  - job_name: quantly-worker
+    static_configs:
+      - targets: ["worker:9100"]

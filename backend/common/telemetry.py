@@ -6,7 +6,6 @@ runs never hit duplicate-registration errors and the default registry stays clea
 
 import logging
 import os
-import shutil
 import time
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -264,8 +263,10 @@ def _on_worker_init(**_: Any) -> None:
     # parent process: serve /metrics for the whole worker
     directory = os.environ.get("PROMETHEUS_MULTIPROC_DIR")
     if directory:
-        shutil.rmtree(directory, ignore_errors=True)
+        # clear files from a previous run; the dir itself may be a mount point
         Path(directory).mkdir(parents=True, exist_ok=True)
+        for stale in Path(directory).iterdir():
+            stale.unlink(missing_ok=True)
     start_http_server(get_settings().metrics_port, registry=_worker_registry())
 
 

@@ -196,6 +196,29 @@ cd frontend && npm test   # vitest
 | `terraform plan` | PRs touching `infra/` | fmt, validate, and a plan posted as a PR comment |
 | `deploy` | push to `main`, while enabled | pushes images to ECR, `terraform apply`, migrations, smoke test |
 
+## Observability
+
+Tracing and metrics are off by default and cost nothing when off. To turn them on locally:
+
+```bash
+# worker, collector, jaeger, prometheus and grafana
+QUANTLY_OTEL_ENABLED=true docker compose --profile obs up -d
+
+# api on the host, exporting to the collector
+cd backend
+QUANTLY_OTEL_ENABLED=true uvicorn api.main:app
+```
+
+| What | Where |
+|---|---|
+| Grafana dashboard (no login) | http://localhost:3000 |
+| Traces (Jaeger) | http://localhost:16686 |
+| Prometheus, rules and alerts | http://localhost:9090 |
+| API metrics | http://localhost:8000/metrics |
+| Worker metrics | http://localhost:9100 |
+
+The dashboard shows request rate, p50/p95/p99 latency, 5xx ratio, job duration, a per-analyzer breakdown, queue depth, retries and failures, cache hit ratio and SLO burn rates. An upload shows up in Jaeger as one trace from the API request through the queue to the worker task and each analyzer. SLOs and the burn-rate alert rules are in [`docs/slo.md`](./docs/slo.md).
+
 ## Running a demo on AWS
 
 The stack is built to be stood up for a demo and destroyed afterwards. Day-to-day work happens on `docker compose` for nothing.
