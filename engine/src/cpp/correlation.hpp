@@ -13,7 +13,11 @@ void covariance_matrix(const double* data, std::size_t n_assets, std::size_t n_o
                        double* out);
 
 // pairwise Pearson correlation. matches numpy.corrcoef: scale-invariant (ddof
-// cancels), clamped to [-1, 1], NaN where a series has zero variance.
-void correlation_matrix(const double* data, std::size_t n_assets, std::size_t n_obs, double* out);
+// cancels), clamped to [-1, 1], NaN where a series has zero variance. rows are
+// standardized once, then the matrix is a tiled, packed dot-product pass, split
+// across `threads` (< 0 = all hardware threads, 0 and 1 = calling thread). the
+// result is identical for every thread count.
+void correlation_matrix(const double* data, std::size_t n_assets, std::size_t n_obs, double* out,
+                        int threads = -1);
 
 }  // namespace quantly

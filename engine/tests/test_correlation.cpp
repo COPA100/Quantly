@@ -2,6 +2,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <cmath>
+#include <random>
 #include <vector>
 
 #include "correlation.hpp"
@@ -39,4 +40,78 @@ TEST_CASE("sample covariance matches a hand calculation") {
     double out[1];
     quantly::covariance_matrix(data.data(), 1, 3, 1, out);
     REQUIRE(out[0] == Approx(1.0));
+}
+
+namespace {
+
+// textbook two-pass pearson, the reference for the tiled kernel
+std::vector<double> naive_corr(const std::vector<double>& d, std::size_t rows, std::size_t cols) {
+    std::vector<double> out(rows * rows);
+    std::vector<double> mean(rows, 0.0);
+    for (std::size_t i = 0; i < rows; ++i) {
+        for (std::size_t k = 0; k < cols; ++k) mean[i] += d[i * cols + k];
+        mean[i] /= static_cast<double>(cols);
+    }
+    for (std::size_t i = 0; i < rows; ++i) {
+        for (std::size_t j = 0; j < rows; ++j) {
+            double xy = 0, xx = 0, yy = 0;
+            for (std::size_t k = 0; k < cols; ++k) {
+                double a = d[i * cols + k] - mean[i], b = d[j * cols + k] - mean[j];
+                xy += a * b;
+                xx += a * a;
+                yy += b * b;
+            }
+            out[i * rows + j] = xy / std::sqrt(xx * yy);
+        }
+    }
+    return out;
+}
+
+std::vector<double> random_data(std::size_t rows, std::size_t cols, unsigned seed) {
+    std::mt19937_64 rng(seed);
+    std::normal_distribution<double> n(0.0, 0.02);
+    std::vector<double> d(rows * cols);
+    for (auto& x : d) x = n(rng);
+    return d;
+}
+
+}  // namespace
+
+TEST_CASE("tiled kernel matches the naive reference across awkward shapes") {
+    // sizes straddle the 16-wide tile and the 256-obs panel boundaries
+    const std::size_t shapes[][2] = {{1, 5}, {2, 3}, {15, 40}, {16, 256}, {17, 257},
+                                     {33, 513}, {50, 1260}, {70, 300}};
+    for (auto& sh : shapes) {
+        auto d = random_data(sh[0], sh[1], 5);
+        auto ref = naive_corr(d, sh[0], sh[1]);
+        std::vector<double> out(sh[0] * sh[0]);
+        quantly::correlation_matrix(d.data(), sh[0], sh[1], out.data());
+        for (std::size_t i = 0; i < out.size(); ++i) {
+            REQUIRE(out[i] == Approx(ref[i]).margin(1e-12));
+        }
+    }
+}
+
+TEST_CASE("correlation is identical for any thread count") {
+    // large enough to cross the threading threshold
+    const std::size_t rows = 120, cols = 1260;
+    auto d = random_data(rows, cols, 9);
+    std::vector<double> base(rows * rows), other(rows * rows);
+    quantly::correlation_matrix(d.data(), rows, cols, base.data(), 1);
+    for (int threads : {0, 2, 3, 7, -1}) {
+        quantly::correlation_matrix(d.data(), rows, cols, other.data(), threads);
+        REQUIRE(other == base);
+    }
+}
+
+TEST_CASE("a flat row stays nan in the threaded path and spares other pairs") {
+    const std::size_t rows = 40, cols = 600;
+    auto d = random_data(rows, cols, 3);
+    for (std::size_t k = 0; k < cols; ++k) d[5 * cols + k] = 0.25;
+    std::vector<double> out(rows * rows);
+    quantly::correlation_matrix(d.data(), rows, cols, out.data(), 4);
+    REQUIRE(std::isnan(out[5 * rows + 9]));
+    REQUIRE(std::isnan(out[9 * rows + 5]));
+    REQUIRE(!std::isnan(out[3 * rows + 9]));
+    REQUIRE(out[3 * rows + 3] == Approx(1.0));
 }

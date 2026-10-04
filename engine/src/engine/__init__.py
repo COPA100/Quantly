@@ -9,16 +9,20 @@ from ._engine import (
     __version__,
     correlation_matrix,
     covariance_matrix,
+    hardware_threads,
     hello,
     max_drawdown,
     monte_carlo_var,
+    monte_carlo_var_qmc,
 )
 
 __all__ = [
     "__version__",
     "correlation_matrix",
     "covariance_matrix",
+    "hardware_threads",
     "hello",
     "max_drawdown",
     "monte_carlo_var",
+    "monte_carlo_var_qmc",
 ]
