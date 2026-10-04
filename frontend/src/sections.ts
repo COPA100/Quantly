@@ -6,6 +6,9 @@ import FrontierSection from './components/sections/FrontierSection'
 import PerformanceSection from './components/sections/PerformanceSection'
 import StressSection from './components/sections/StressSection'
 import VarSection from './components/sections/VarSection'
+import FactorSection from './components/sections/FactorSection'
+import PerformanceSection from './components/sections/PerformanceSection'
+import RiskContributionSection from './components/sections/RiskContributionSection'
 import type { Analytics } from './lib/types'
 
 export interface AnalyticsSection {
@@ -25,4 +28,6 @@ export const SECTIONS: AnalyticsSection[] = [
   { key: 'stress', component: StressSection },
   { key: 'var_suite', component: VarSection },
   { key: 'frontier', component: FrontierSection },
+  { key: 'factors', component: FactorSection },
+  { key: 'risk_contribution', component: RiskContributionSection },
 ]
