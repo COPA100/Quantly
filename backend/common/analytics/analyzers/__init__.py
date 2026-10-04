@@ -13,6 +13,7 @@ from common.analytics.analyzers import (
     performance,
     stress,
     var,
+    var_suite,
 )
 from common.analytics.analyzers.base import Analyzer, analyzer, run_analyzers
 
@@ -25,6 +26,7 @@ REGISTRY: list[Analyzer] = [
     # reads the core metrics above, keep it after them
     insights.insights,
     stress.stress,
+    var_suite.var_suite,
 ]
 
 __all__ = ["REGISTRY", "Analyzer", "analyzer", "run_analyzers"]
