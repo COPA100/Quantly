@@ -37,6 +37,7 @@ Beyond current value and gain/loss, Quantly surfaces risk and diversification in
 | Correlation matrix | Am I actually diversified, or do my holdings all move together? |
 | Beta | How hard do I swing relative to the market? |
 | Monte Carlo VaR | What does a bad month look like? |
+| VaR method comparison + backtest | Do historical, normal, Cornish-Fisher and Monte Carlo VaR agree, and did the forecast hold up over the last two years? |
 | Allocation, concentration | How exposed am I to a handful of names? |
 | Historical stress tests | How would this exact portfolio have done in 2008, 2020 and 2022? Holdings without that history are estimated from beta. |
 
