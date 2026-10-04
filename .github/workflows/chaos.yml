@@ -1,0 +1,61 @@
+name: chaos
+
+# kills the worker while portfolios are processing and checks nothing is lost
+# or duplicated. slow and needs yahoo finance, so it is manual plus nightly
+# rather than part of every pull request.
+on:
+  workflow_dispatch:
+    inputs:
+      count:
+        description: portfolios to upload
+        default: "20"
+      kills:
+        description: worker kills or restarts
+        default: "4"
+  schedule:
+    - cron: "0 5 * * *"
+
+jobs:
+  chaos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      # recover stuck jobs in seconds rather than the production 15 minutes
+      QUANTLY_STUCK_AFTER_SECONDS: "45"
+      QUANTLY_SWEEPER_INTERVAL_SECONDS: "15"
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install api dependencies
+        run: pip install -r backend/requirements/api.txt
+
+      - name: Start the stack
+        run: docker compose up -d --build --wait postgres redis s3 worker beat
+
+      - name: Migrate and start the api
+        working-directory: backend
+        env:
+          # the api sits on the runner, uploads would otherwise trip the limiter
+          QUANTLY_RATE_LIMIT_UPLOAD_MAX: "1000"
+        run: |
+          alembic upgrade head
+          nohup uvicorn api.main:app --port 8000 > ../api.log 2>&1 &
+
+      - name: Chaos run
+        working-directory: backend
+        run: python -m scripts.chaos --count "${{ inputs.count || 20 }}" --kills "${{ inputs.kills || 4 }}"
+
+      - name: Logs on failure
+        if: failure()
+        run: |
+          docker compose logs --no-color --tail=300 worker beat
+          cat api.log
+
+      - name: Stop the stack
+        if: always()
+        run: docker compose down -v
