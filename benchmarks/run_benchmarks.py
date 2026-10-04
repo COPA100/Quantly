@@ -427,7 +427,7 @@ def main() -> None:
 TAKEAWAYS: list[str] = [
     "- **Drawdown / underwater duration** is the clear C++ win: a sequential "
     "peak-to-trough scan numpy cannot vectorize, so the compiled loop pulls "
-    "well ahead of both baselines (20x to 45x over numpy).",
+    "well ahead of both baselines (25x to 43x over numpy).",
     "- **Monte Carlo VaR** on a single thread is a tie with numpy at best: "
     "numpy's batched ziggurat normals are as fast per draw as the C++ "
     "Philox + Box-Muller loop. The win is parallelism: paths are split into "
@@ -438,7 +438,7 @@ TAKEAWAYS: list[str] = [
     "fewer paths on this smooth 21-day problem (Sobol points on a Helmert "
     "rotation of the shocks). Plain MC follows the expected n^-1/2 rate.",
     "- **Correlation** still goes to numpy. One thread of the tiled kernel loses "
-    "to multithreaded BLAS (0.1x to 0.5x for 50+ assets) even with the AVX2 "
+    "to multithreaded BLAS (0.3x to 0.6x for 50+ assets) even with the AVX2 "
     "micro-kernel; threads close most of the gap at 500 assets. It is still much "
     "faster than the old naive loop and far ahead of pure python, but it is not "
     "a reason to prefer C++ over BLAS.",

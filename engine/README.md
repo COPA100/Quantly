@@ -33,3 +33,21 @@ build uses the MSYS2 **ucrt64** GCC and statically links the runtime so the
 ```sh
 CC=gcc CXX=g++ CMAKE_GENERATOR=Ninja pip install ./engine --no-build-isolation
 ```
+
+## Threads, determinism and SIMD
+
+- `monte_carlo_var(..., threads=None)` and `correlation_matrix(data, threads=None)`
+  use all hardware threads by default; `0` or `1` runs on the calling thread. The
+  GIL is released during compute.
+- Monte Carlo paths are split into fixed blocks of 1024. Each block draws from its
+  own Philox4x32-10 counter-based stream keyed by `(seed, block)`, so the result is
+  bit-identical for any thread count. (A shared sequential RNG like `mt19937_64`
+  could not be split across threads reproducibly.)
+- `monte_carlo_var_qmc` is a Sobol quasi-Monte Carlo variant (Joe-Kuo direction
+  numbers, up to 30 days, seeded random digital shift, Helmert-rotated shocks).
+- The correlation kernel standardizes rows once, then runs a tiled, packed
+  dot-product pass. On x86-64 an AVX2+FMA micro-kernel is picked at runtime
+  (`QUANTLY_DISABLE_AVX2=1` forces the portable path); other targets use the
+  portable kernel. The Monte Carlo loop is not hand-vectorized: libm `log`/`sin`/`cos`
+  dominate it and an AVX2 path would need its own vector math.
+- `cmake` builds default to `Release`.

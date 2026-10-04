@@ -9,11 +9,11 @@
     "engine_threads": 22
   },
   "ratios": {
-    "drawdown_5040": 44.52,
-    "correlation_100_1t": 0.5,
-    "correlation_500_1t": 0.14,
-    "mc_var_20k_1t": 0.8,
-    "mc_var_100k_1t": 0.78,
-    "qmc_var_100k_1t": 1.35
+    "drawdown_5040": 43.1,
+    "correlation_100_1t": 0.58,
+    "correlation_500_1t": 0.27,
+    "mc_var_20k_1t": 1.02,
+    "mc_var_100k_1t": 0.98,
+    "qmc_var_100k_1t": 1.46
   }
 }
