@@ -1,5 +1,6 @@
 from datetime import date
 from functools import lru_cache
+from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -44,6 +45,10 @@ class Settings(BaseSettings):
     # computed analytics cached by holdings+as-of hash. one day, since a given
     # book's metrics only change when prices roll over to the next day.
     analytics_cache_ttl_seconds: int = 86400
+
+    # where prices come from. "mock" is deterministic synthetic data with no
+    # network, used by load tests and offline runs.
+    market_data_source: Literal["yahoo", "mock"] = "yahoo"
 
     # daily history is fetched back to this date for every ticker (or its
     # listing, if later). deep history feeds stress tests of past crises.

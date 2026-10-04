@@ -6,10 +6,17 @@ import pandas as pd
 import yfinance as yf
 
 from common.config import get_settings
+from common.market_data.mock import mock_current_price, mock_history
+
+
+def _use_mock() -> bool:
+    return get_settings().market_data_source == "mock"
 
 
 def fetch_current_price(ticker: str) -> float | None:
     # latest daily close from yahoo, None for an invalid or delisted ticker
+    if _use_mock():
+        return mock_current_price(ticker, date.today())
     try:
         hist = yf.Ticker(ticker).history(period="1d", auto_adjust=False)
     except Exception:
@@ -25,6 +32,8 @@ def fetch_current_prices(tickers: list[str]) -> dict[str, float]:
     tickers = [t.upper() for t in tickers]
     if not tickers:
         return {}
+    if _use_mock():
+        return {t: p for t in tickers if (p := mock_current_price(t, date.today())) is not None}
     try:
         data = yf.download(tickers, period="1d", interval="1d", progress=False, auto_adjust=False)
     except Exception:
@@ -50,6 +59,8 @@ def fetch_history(ticker: str, start: date | None = None, end: date | None = Non
     # daily bars from yahoo, from `start` (default: the configured history
     # start) up to but not including `end` (default: today)
     start = start or get_settings().history_start
+    if _use_mock():
+        return mock_history(ticker, start, end, date.today())
     try:
         hist = yf.Ticker(ticker).history(
             start=start.isoformat(),
