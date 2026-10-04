@@ -107,5 +107,6 @@ def test_scenarios_are_skipped_without_benchmark_data():
 def test_scenario_constants_and_registration():
     assert all(s.start < s.end for s in SCENARIOS)
     assert len(SCENARIOS) == 6
-    assert REGISTRY[-1].name == "stress"
-    assert REGISTRY[-1].keys == ("stress",)
+    names = [a.name for a in REGISTRY]
+    assert names.index("stress") > names.index("insights")
+    assert REGISTRY[names.index("stress")].keys == ("stress",)
