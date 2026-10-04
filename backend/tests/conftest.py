@@ -36,3 +36,12 @@ def no_network(monkeypatch):
         raise requests.ConnectionError("network disabled in tests")
 
     monkeypatch.setattr(requests, "get", refuse)
+def fake_redis(monkeypatch):
+    # in-memory redis behind the worker lock and the api rate limiter, so no test
+    # needs a live server. tests that want it down patch the getter themselves.
+    import fakeredis
+
+    client = fakeredis.FakeRedis(decode_responses=True)
+    monkeypatch.setattr("worker.tasks.get_redis", lambda: client)
+    monkeypatch.setattr("api.ratelimit.get_redis", lambda: client)
+    return client

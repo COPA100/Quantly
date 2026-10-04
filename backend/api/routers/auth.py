@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from api.deps import get_google_verifier
+from api.ratelimit import limit_login
 from api.schemas.auth import (
     GoogleLoginRequest,
     LoginRequest,
@@ -44,7 +45,7 @@ def register(payload: RegisterRequest, db: Annotated[Session, Depends(get_db)]):
     return user
 
 
-@router.post("/login", response_model=TokenPair)
+@router.post("/login", response_model=TokenPair, dependencies=[Depends(limit_login)])
 def login(payload: LoginRequest, db: Annotated[Session, Depends(get_db)]):
     try:
         user = authenticate_user(db, payload.email, payload.password)

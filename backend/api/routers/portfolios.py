@@ -1,5 +1,4 @@
 import io
-from collections.abc import Callable
 from decimal import Decimal
 from typing import Annotated, Any
 
@@ -10,7 +9,8 @@ from redis.asyncio import Redis
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from api.deps import get_async_redis, get_current_user, get_enqueuer
+from api.deps import get_async_redis, get_current_user
+from api.ratelimit import limit_upload
 from api.schemas.portfolio import (
     PortfolioAccepted,
     PortfolioDetail,
@@ -23,19 +23,21 @@ from common.csv_reader import CSVValidationError, parse_portfolio
 from common.db import get_db
 from common.events import status_payload
 from common.models import AnalyticsResult, Holding, Job, Portfolio, PortfolioStatus, User
+from common.outbox import enqueue_analysis
 from common.storage import Storage, get_storage
 
 router = APIRouter(prefix="/portfolios", tags=["portfolios"])
 settings = get_settings()
 
 
-@router.post("", status_code=202, response_model=PortfolioAccepted)
+@router.post(
+    "", status_code=202, response_model=PortfolioAccepted, dependencies=[Depends(limit_upload)]
+)
 async def create_portfolio(
     file: UploadFile,
     db: Annotated[Session, Depends(get_db)],
     storage: Annotated[Storage, Depends(get_storage)],
     user: Annotated[User, Depends(get_current_user)],
-    enqueue: Annotated[Callable[[int], str], Depends(get_enqueuer)],
 ):
     data = await file.read()
 
@@ -73,12 +75,12 @@ async def create_portfolio(
             )
         )
 
-    db.commit()
-
-    # hand the analysis off to the worker and record the job for polling
-    task_id = enqueue(portfolio.id)
-    job = Job(portfolio_id=portfolio.id, celery_task_id=task_id, status="queued")
+    # the job and its outbox row commit with the upload, so an accepted upload
+    # can never lose its analysis. the beat relay hands the row to the broker.
+    job = Job(portfolio_id=portfolio.id, status="queued")
     db.add(job)
+    db.flush()
+    enqueue_analysis(db, job)
     db.commit()
     db.refresh(job)
 

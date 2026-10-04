@@ -10,7 +10,7 @@ celery_app = Celery(
     "quantly",
     broker=settings.celery_broker_url,
     backend=settings.celery_result_backend,
-    include=["worker.tasks"],
+    include=["worker.tasks", "worker.outbox"],
 )
 
 celery_app.conf.update(
@@ -24,4 +24,18 @@ celery_app.conf.update(
     worker_prefetch_multiplier=1,
     # finished task state expires after a day, the Job row is the durable record
     result_expires=86400,
+    # an unacked task goes back on the queue after this long, which is how a
+    # killed worker's task is redelivered
+    broker_transport_options={"visibility_timeout": settings.broker_visibility_timeout_seconds},
+    # run by the `beat` service, one instance only
+    beat_schedule={
+        "relay-outbox": {
+            "task": "relay_outbox",
+            "schedule": settings.outbox_relay_interval_seconds,
+        },
+        "sweep-stuck-portfolios": {
+            "task": "sweep_stuck_portfolios",
+            "schedule": settings.sweeper_interval_seconds,
+        },
+    },
 )
