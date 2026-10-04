@@ -1,0 +1,76 @@
+name: fuzz
+
+# a short run on PRs, a longer one weekly or on demand. crashing inputs are uploaded.
+on:
+  pull_request:
+    paths:
+      - "backend/common/csv_reader.py"
+      - "engine/src/**"
+      - "engine/fuzz/**"
+      - "fuzz/**"
+      - ".github/workflows/fuzz.yml"
+  schedule:
+    - cron: "0 4 * * 1"
+  workflow_dispatch:
+    inputs:
+      seconds:
+        description: "seconds per fuzz target"
+        default: "600"
+
+env:
+  # PR: 60s. weekly: 10 minutes. manual: whatever was asked for.
+  FUZZ_SECONDS: ${{ github.event_name == 'pull_request' && '60' || github.event.inputs.seconds || '600' }}
+
+jobs:
+  csv:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      # atheris lags the newest cpython, 3.12 is the one it builds on reliably
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install atheris and the parser's dependencies
+        run: pip install atheris==2.3.0 pandas==2.3.3 numpy==2.3.4
+
+      - name: Fuzz parse_portfolio
+        working-directory: backend
+        run: |
+          mkdir -p ../fuzz/corpus ../fuzz/artifacts
+          cp ../example_csv/*.csv ../fuzz/corpus/
+          PYTHONPATH=. python ../fuzz/csv_fuzz.py ../fuzz/corpus \
+            -max_total_time="$FUZZ_SECONDS" -artifact_prefix=../fuzz/artifacts/ -rss_limit_mb=2048
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: csv-fuzz-crashes
+          path: fuzz/artifacts/
+
+  engine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build the libFuzzer harness with ASan and UBSan
+        run: |
+          sudo apt-get update && sudo apt-get install -y clang
+          # every kernel source but the pybind module
+          SOURCES=$(ls engine/src/cpp/*.cpp | grep -v module.cpp)
+          clang++ -std=c++17 -O1 -g -fno-omit-frame-pointer -pthread \
+            -fsanitize=fuzzer,address,undefined -fno-sanitize-recover=undefined \
+            -Iengine/src/cpp engine/fuzz/fuzz_kernels.cpp $SOURCES -o fuzz_kernels
+
+      - name: Fuzz the kernels
+        run: |
+          mkdir -p engine/fuzz/corpus engine/fuzz/artifacts
+          ./fuzz_kernels engine/fuzz/corpus -max_total_time="$FUZZ_SECONDS" \
+            -artifact_prefix=engine/fuzz/artifacts/ -rss_limit_mb=2048
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: engine-fuzz-crashes
+          path: engine/fuzz/artifacts/

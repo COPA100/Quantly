@@ -50,3 +50,5 @@ e2e/test-results/
 e2e/playwright-report/
 fuzz/corpus/
 fuzz/artifacts/
+engine/fuzz/corpus/
+engine/fuzz/artifacts/
