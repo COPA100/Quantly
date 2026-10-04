@@ -40,3 +40,6 @@ Thumbs.db
 # ---- Local planning docs ----
 SCOPE.md
 VALUE.md
+
+# editor settings
+.vscode/
