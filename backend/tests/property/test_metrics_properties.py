@@ -29,10 +29,10 @@ def test_correlation_is_bounded_symmetric_with_unit_diagonal(matrix):
         assert np.all(np.abs(m[finite]) <= 1.0 + 1e-9)
         np.testing.assert_allclose(m, m.T, atol=1e-9, equal_nan=True)
         np.testing.assert_allclose(np.diag(m)[~flat], 1.0, atol=1e-9)
-        # nan only ever comes from a constant series. checked with ptp, not var: a
-        # constant row can leave rounding residue in np.var (~1e-50 at 1e-9). the
-        # converse does not hold either, numpy may give a constant a finite value.
-        assert np.all(np.ptp(matrix, axis=1)[flat] == 0.0)
+        # nan only comes from a row with no measurable spread: constant, or so tiny
+        # (~1e-250) that the squared deviations underflow to zero. ptp, not var: a
+        # constant row can leave rounding residue in np.var (~1e-50 at 1e-9).
+        assert np.all(np.ptp(matrix, axis=1)[flat] ** 2 == 0.0)
 
 
 @given(return_series(min_size=1))
