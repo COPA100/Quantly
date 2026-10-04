@@ -107,8 +107,16 @@ VaRResult tail_stats(std::vector<double>& pnl, double confidence) {
 
 }  // namespace
 
+// nan/inf moments would poison the quantile, so reject them up front
+static void check_moments(double mu, double sigma) {
+    if (!std::isfinite(mu) || !std::isfinite(sigma)) {
+        throw std::invalid_argument("mu and sigma must be finite");
+    }
+}
+
 VaRResult monte_carlo_var(double mu, double sigma, int horizon, std::size_t n_sims,
                           double confidence, unsigned long long seed, int threads) {
+    check_moments(mu, sigma);
     if (n_sims == 0 || horizon <= 0) {
         return {0.0, 0.0};
     }
@@ -130,6 +138,7 @@ VaRResult monte_carlo_var(double mu, double sigma, int horizon, std::size_t n_si
 
 VaRResult monte_carlo_var_qmc(double mu, double sigma, int horizon, std::size_t n_sims,
                               double confidence, unsigned long long seed, int threads) {
+    check_moments(mu, sigma);
     if (n_sims == 0 || horizon <= 0) {
         return {0.0, 0.0};
     }

@@ -18,6 +18,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <stdexcept>
 #include <vector>
 
 #include "correlation.hpp"
@@ -111,11 +112,14 @@ void fuzz_var(Reader& r) {
     double conf = r.take<uint16_t>() / 65535.0;
     unsigned long long seed = r.take<uint64_t>();
 
-    // a NaN sigma slips past the `sigma <= 0` guard and trips the stddev assert in
-    // std::normal_distribution, and inf/NaN params make std::sort see NaN. the
-    // python layer only passes finite moments, so non-finite ones are skipped here.
+    // non-finite moments must be rejected, never computed on
     if (!std::isfinite(mu) || !std::isfinite(sigma)) {
-        return;
+        try {
+            quantly::monte_carlo_var(mu, sigma, horizon, n_sims, conf, seed);
+        } catch (const std::invalid_argument&) {
+            return;
+        }
+        std::abort();
     }
 
     auto out = quantly::monte_carlo_var(mu, sigma, horizon, n_sims, conf, seed);

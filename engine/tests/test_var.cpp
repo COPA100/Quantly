@@ -11,6 +11,13 @@ using Catch::Approx;
 using quantly::monte_carlo_var;
 using quantly::monte_carlo_var_qmc;
 
+TEST_CASE("non-finite moments are rejected") {
+    const double nan = std::nan("");
+    REQUIRE_THROWS_AS(monte_carlo_var(0.0, nan, 21, 1000, 0.95, 1), std::invalid_argument);
+    REQUIRE_THROWS_AS(monte_carlo_var(INFINITY, 0.01, 21, 1000, 0.95, 1), std::invalid_argument);
+    REQUIRE_THROWS_AS(monte_carlo_var_qmc(0.0, nan, 21, 1024, 0.95, 1), std::invalid_argument);
+}
+
 TEST_CASE("degenerate inputs give zero var") {
     REQUIRE(monte_carlo_var(0.0, 0.02, 0, 1000, 0.95, 1).var == 0.0);
     REQUIRE(monte_carlo_var(0.0, 0.02, 5, 0, 0.95, 1).var == 0.0);
