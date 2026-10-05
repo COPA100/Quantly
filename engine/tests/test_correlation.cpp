@@ -67,7 +67,7 @@ std::vector<double> naive_corr(const std::vector<double>& d, std::size_t rows, s
     return out;
 }
 
-std::vector<double> random_data(std::size_t rows, std::size_t cols, unsigned seed) {
+std::vector<double> random_matrix(std::size_t rows, std::size_t cols, unsigned seed) {
     std::mt19937_64 rng(seed);
     std::normal_distribution<double> n(0.0, 0.02);
     std::vector<double> d(rows * cols);
@@ -82,7 +82,7 @@ TEST_CASE("tiled kernel matches the naive reference across awkward shapes") {
     const std::size_t shapes[][2] = {{1, 5}, {2, 3}, {15, 40}, {16, 256}, {17, 257},
                                      {33, 513}, {50, 1260}, {70, 300}};
     for (auto& sh : shapes) {
-        auto d = random_data(sh[0], sh[1], 5);
+        auto d = random_matrix(sh[0], sh[1], 5);
         auto ref = naive_corr(d, sh[0], sh[1]);
         std::vector<double> out(sh[0] * sh[0]);
         quantly::correlation_matrix(d.data(), sh[0], sh[1], out.data());
@@ -95,7 +95,7 @@ TEST_CASE("tiled kernel matches the naive reference across awkward shapes") {
 TEST_CASE("correlation is identical for any thread count") {
     // large enough to cross the threading threshold
     const std::size_t rows = 120, cols = 1260;
-    auto d = random_data(rows, cols, 9);
+    auto d = random_matrix(rows, cols, 9);
     std::vector<double> base(rows * rows), other(rows * rows);
     quantly::correlation_matrix(d.data(), rows, cols, base.data(), 1);
     for (int threads : {0, 2, 3, 7, -1}) {
@@ -106,7 +106,7 @@ TEST_CASE("correlation is identical for any thread count") {
 
 TEST_CASE("a flat row stays nan in the threaded path and spares other pairs") {
     const std::size_t rows = 40, cols = 600;
-    auto d = random_data(rows, cols, 3);
+    auto d = random_matrix(rows, cols, 3);
     for (std::size_t k = 0; k < cols; ++k) d[5 * cols + k] = 0.25;
     std::vector<double> out(rows * rows);
     quantly::correlation_matrix(d.data(), rows, cols, out.data(), 4);
