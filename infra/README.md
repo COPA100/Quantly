@@ -263,7 +263,7 @@ All have defaults, see `variables.tf`. The ones worth knowing:
 
 ## Autoscaling
 
-`autoscaling.tf`, behind `enable_autoscaling`. **Not validated:** it was written without a Terraform install, so run `terraform fmt`, `validate` and `plan` before trusting it.
+`autoscaling.tf`, behind `enable_autoscaling`. It passes `terraform fmt` and `validate` but has not been planned against the real account or applied, so run `plan` before trusting it.
 
 - A small Lambda (`lambda/queue_depth/handler.py`, stdlib plus boto3) runs every minute in the VPC. It reads `LLEN` of the celery queue from Redis db 1 and the running task count from `DescribeServices`, then publishes `Quantly/QueueDepth` and `Quantly/BacklogPerWorker` (depth divided by `max(running, 1)`).
 - The worker service has a target tracking policy on `BacklogPerWorker` with target `worker_backlog_target`. `ecs-service` ignores `desired_count` changes once autoscaling owns it.
