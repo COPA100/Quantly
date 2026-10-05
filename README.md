@@ -10,25 +10,17 @@ It is also a deliberate exercise in production system design. The API and the co
 
 ## Screenshots
 
-Sign in, upload a brokerage export, and read the results:
+Sign in, open a portfolio, and move through the analysis tabs:
 
-![Demo: signing in, uploading a CSV, and scrolling through the analyzed portfolio](./docs/screenshots/demo.gif)
+![Demo: signing in and moving through the overview, risk, stress test, optimization, factor and holdings tabs](./docs/screenshots/demo.gif)
 
-The sample portfolio in [`example_csv/ex2.csv`](./example_csv/ex2.csv), analyzed against five years of real price history. ([Full page](./docs/screenshots/portfolio-detail.png).)
+The sample portfolio in [`example_csv/ex2.csv`](./example_csv/ex2.csv), analyzed against real price history. Each portfolio opens on its key figures and an overview, with the deeper analyses on their own tabs. ([Full overview page](./docs/screenshots/portfolio-detail.png), [full risk tab](./docs/screenshots/risk.png).)
 
-![Portfolio overview: total value, gain/loss, allocation and the equity curve](./docs/screenshots/overview.png)
+![Portfolio overview: key figures, the analysis pipeline, value over time and allocation](./docs/screenshots/overview.png)
 
-Every risk metric comes with what it means, not just the number:
+How the same portfolio would have done in past crises, replayed on real prices back to 2007. Pick a scenario to see every holding's loss, and which ones had to be estimated from beta:
 
-![Risk insight cards: volatility, Sharpe, Sortino, max drawdown, beta and value at risk](./docs/screenshots/risk.png)
-
-The correlation heatmap answers "am I actually diversified?" at a glance:
-
-![Correlation matrix heatmap across the 13 holdings](./docs/screenshots/correlation.png)
-
-How the same portfolio would have done in past crises, replayed on real prices back to 2007:
-
-![Stress tests: portfolio vs S&P 500 in six crises from 2008 to 2022](./docs/screenshots/stress.png)
+![Stress tests: portfolio vs S&P 500 in six crises, with a per-holding breakdown of the selected one](./docs/screenshots/stress.png)
 
 Four ways to estimate value at risk, and a two-year backtest of whether the forecast held up:
 
@@ -36,9 +28,9 @@ Four ways to estimate value at risk, and a two-year backtest of whether the fore
 
 Where the portfolio sits against the best mix of its own holdings, and what drives its returns:
 
-![Efficient frontier with the current portfolio and min-variance, max-Sharpe and risk-parity alternatives](./docs/screenshots/frontier.png)
+![Efficient frontier next to the weights of each alternative portfolio](./docs/screenshots/frontier.png)
 
-![Fama-French five factor plus momentum loadings with confidence intervals](./docs/screenshots/factors.png)
+![Fama-French five factor plus momentum loadings with confidence intervals and a plain-English glossary](./docs/screenshots/factors.png)
 
 ## What it does
 
