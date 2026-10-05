@@ -1,7 +1,7 @@
 from datetime import date
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 import common.market_data.history as history
 from common.config import get_settings
@@ -171,3 +171,15 @@ def test_marking_backfilled_twice_updates_in_place(db_session):
     history._mark_backfilled(db_session, "DUPE", date(2007, 1, 1))
     db_session.expire_all()
     assert db_session.get(TickerMeta, "DUPE").backfilled_from == date(2007, 1, 1)
+
+
+def test_storing_decades_of_bars_stays_under_the_bind_parameter_limit(db_session):
+    # 20 years of daily bars times 8 columns is past both sqlite's and postgres's
+    # per-statement parameter cap, so the insert has to be batched
+    from datetime import timedelta
+
+    start = date(2000, 1, 3)
+    bars = [bar(start + timedelta(days=i)) for i in range(8_000)]
+    history.store_bars(db_session, "LONG", bars)
+    count = db_session.scalar(select(func.count()).select_from(Price).where(Price.ticker == "LONG"))
+    assert count == 8_000

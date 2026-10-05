@@ -33,6 +33,10 @@ def get_db() -> Generator[Session]:
         db.close()
 
 
+# stays under the lowest per-statement bind parameter limit (sqlite)
+MAX_BIND_PARAMS = 30_000
+
+
 def insert_ignore(db: Session, model: type[Base], rows: Iterable[dict[str, Any]]) -> None:
     # insert rows, skipping any whose primary key already exists. shared tables
     # (prices, factors) can be filled by two jobs at once, and the loser of that
@@ -41,4 +45,9 @@ def insert_ignore(db: Session, model: type[Base], rows: Iterable[dict[str, Any]]
     if not rows:
         return
     dialect = postgresql if db.get_bind().dialect.name == "postgresql" else sqlite
-    db.execute(dialect.insert(model).values(rows).on_conflict_do_nothing())
+    # one statement per batch: postgres caps a statement at 65,535 bind
+    # parameters and sqlite at 32,766, and 20 years of daily rows exceed both
+    batch = max(1, MAX_BIND_PARAMS // len(rows[0]))
+    for start in range(0, len(rows), batch):
+        chunk = rows[start : start + batch]
+        db.execute(dialect.insert(model).values(chunk).on_conflict_do_nothing())
