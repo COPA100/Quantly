@@ -20,7 +20,7 @@ The project is also an exercise in building that the way a production service wo
 
 - Trading advice or order execution. Quantly is diagnostic.
 - Intraday data. Everything is daily closes.
-- Always-on hosting. The AWS stack is stood up for demos and torn down after (see the README for cost).
+- Always-on hosting. The AWS stack is stood up for demos and torn down after (see [deploy-aws.md](./deploy-aws.md) for cost).
 - Transactions and tax lots. A portfolio is a snapshot of current positions.
 
 ## Architecture
@@ -106,7 +106,7 @@ The C++ engine (pybind11) holds the kernels where compiled code can win, with Nu
 
 - **Drawdown** is a path-dependent scan that NumPy cannot vectorize. C++ is about 43x faster.
 - **Monte Carlo VaR** splits paths into fixed blocks of 1024, each with its own Philox counter-based random stream keyed by (seed, block). Any thread can compute any block in any order, so the result is bit-identical for 1 or 22 threads. On one thread it ties NumPy, because NumPy's batched normal draws are as fast per variate; the win is parallelism (5.7x on 22 threads). A Sobol quasi-Monte Carlo variant reaches the same error with roughly 10x fewer paths, but only after rotating the daily shocks onto a Helmert basis so the best-distributed Sobol dimensions carry the overall level of the path.
-- **Correlation** uses a tiled, packed kernel with a runtime-dispatched AVX2 micro-kernel. It is 2x to 12x faster than the old loop and still loses to multithreaded BLAS. It is kept honest in the README rather than tuned until the table looks good.
+- **Correlation** uses a tiled, packed kernel with a runtime-dispatched AVX2 micro-kernel. It is 2x to 12x faster than the old loop and still loses to multithreaded BLAS. It is reported honestly in [benchmarks.md](./benchmarks.md) rather than tuned until the table looks good.
 
 In the worker the engine runs single-threaded (`engine_threads = 1`): Celery already runs one process per core, and every process spawning a thread per core would oversubscribe the machine. Multithreading helps a single large job, not a busy queue.
 
