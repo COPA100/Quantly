@@ -26,9 +26,15 @@ test('register, upload a portfolio, and see it analyzed', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Risk & performance' })).toBeVisible()
   await expect(page.getByText('Sharpe ratio', { exact: true })).toBeVisible()
   await expect(page.getByText('Max drawdown', { exact: true })).toBeVisible()
-  await expect(page.getByText(/Value at risk/)).toBeVisible()
+  // the risk card, not the var methods section further down
+  await expect(page.getByText(/Value at risk/).first()).toBeVisible()
 
   await expect(page.getByRole('heading', { name: 'Correlation' })).toBeVisible()
+  // newer analyzers. seeded history is ~400 days, too short for the stress
+  // scenarios, and factor data needs the network, so neither is asserted here.
+  await expect(page.getByRole('heading', { name: 'Value at risk methods' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Efficient frontier' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Risk contribution' })).toBeVisible()
   // eight holdings in the sample book, each a row and column label in the heatmap
   await expect(page.getByText('AAPL').first()).toBeVisible()
 })
