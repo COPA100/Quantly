@@ -10,6 +10,8 @@ has duplicated or partial analytics rows.
 """
 
 import argparse
+import csv
+import io
 import json
 import random
 import subprocess
@@ -40,10 +42,13 @@ class Report:
     incomplete: list[int] = field(default_factory=list)
     kills: int = 0
     seconds: float = 0.0
+    # a run that never killed a worker proved nothing, so it does not pass
+    kills_required: int = 0
 
     @property
     def ok(self) -> bool:
-        return not (self.non_terminal or self.duplicates or self.incomplete)
+        broken = self.non_terminal or self.duplicates or self.incomplete
+        return not broken and self.kills >= self.kills_required
 
     def summary(self) -> str:
         return (
@@ -67,9 +72,15 @@ def parse_result_rows(text: str) -> list[tuple[int, str, int]]:
 
 
 def evaluate(
-    statuses: dict[int, str], rows: list[tuple[int, str, int]], kills: int = 0, seconds: float = 0
+    statuses: dict[int, str],
+    rows: list[tuple[int, str, int]],
+    kills: int = 0,
+    seconds: float = 0,
+    kills_required: int = 0,
 ) -> Report:
-    report = Report(total=len(statuses), kills=kills, seconds=seconds)
+    report = Report(
+        total=len(statuses), kills=kills, seconds=seconds, kills_required=kills_required
+    )
     metrics: dict[int, set[str]] = defaultdict(set)
     for portfolio_id, metric, count in rows:
         metrics[portfolio_id].add(metric)
@@ -93,6 +104,21 @@ def evaluate(
         if not got or got != expected:
             report.incomplete.append(portfolio_id)
     return report
+
+
+def vary_book(csv_bytes: bytes, i: int) -> bytes:
+    # nudge the first holding's share count so every upload is a different book.
+    # identical books hit the analytics cache and finish before a worker dies.
+    lines = csv_bytes.decode().splitlines()
+    header = next(n for n, line in enumerate(lines) if "Qty (Quantity)" in line)
+    columns = next(csv.reader([lines[header]]))
+    qty = columns.index("Qty (Quantity)")
+    row = next(csv.reader([lines[header + 1]]))
+    row[qty] = f"{float(row[qty]) + i / 1000:g}"
+    out = io.StringIO()
+    csv.writer(out, quoting=csv.QUOTE_ALL, lineterminator="").writerow(row)
+    lines[header + 1] = out.getvalue()
+    return ("\n".join(lines) + "\n").encode()
 
 
 def pick_action(rng: random.Random) -> str:
@@ -197,21 +223,22 @@ def run(args: argparse.Namespace) -> Report:
     token = _json_post(f"{base}/auth/login", creds)["access_token"]
     auth = {"Authorization": f"Bearer {token}"}
 
-    csv_bytes = Path(args.csv).read_bytes()
-    ids: list[int] = []
-    for i in range(args.count):
-        body, content_type = encode_multipart(f"chaos-{i}.csv", csv_bytes)
-        accepted = _request(
-            f"{base}/portfolios", "POST", body, {**auth, "Content-Type": content_type}
-        )
-        ids.append(accepted["id"])
-    print(f"chaos: uploaded {len(ids)} portfolios", flush=True)
-
+    # the killer starts first, so workers die while jobs are in flight
     started = time.monotonic()
     stop = threading.Event()
     kills = [0]
     killer = threading.Thread(target=_kill_worker_loop, args=(args, rng, stop, kills))
     killer.start()
+
+    csv_bytes = Path(args.csv).read_bytes()
+    ids: list[int] = []
+    for i in range(args.count):
+        body, content_type = encode_multipart(f"chaos-{i}.csv", vary_book(csv_bytes, i))
+        accepted = _request(
+            f"{base}/portfolios", "POST", body, {**auth, "Content-Type": content_type}
+        )
+        ids.append(accepted["id"])
+    print(f"chaos: uploaded {len(ids)} portfolios", flush=True)
 
     statuses: dict[int, str] = {}
     deadline = started + args.timeout
@@ -228,7 +255,13 @@ def run(args: argparse.Namespace) -> Report:
         _compose(args, "up", "-d", "worker", check=False)
 
     seconds = time.monotonic() - started
-    return evaluate(statuses, _query_rows(args, ids), kills=kills[0], seconds=seconds)
+    return evaluate(
+        statuses,
+        _query_rows(args, ids),
+        kills=kills[0],
+        seconds=seconds,
+        kills_required=1 if args.kills > 0 else 0,
+    )
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -62,3 +62,25 @@ def test_multipart_body_carries_file_and_boundary():
     assert body.startswith(f"--{boundary}\r\n".encode())
     assert b'filename="a.csv"' in body and b"x,y\n1,2\n" in body
     assert body.endswith(f"--{boundary}--\r\n".encode())
+
+
+def test_a_run_without_kills_does_not_pass():
+    statuses = {1: "complete"}
+    assert not evaluate(statuses, _rows(1), kills=0, kills_required=1).ok
+    assert evaluate(statuses, _rows(1), kills=1, kills_required=1).ok
+
+
+def test_vary_book_makes_each_upload_a_different_book():
+    import io
+    from pathlib import Path
+
+    from common.csv_reader import parse_portfolio
+    from scripts.chaos import vary_book
+
+    raw = (Path(__file__).resolve().parents[2] / "example_csv" / "ex1.csv").read_bytes()
+    books = [parse_portfolio(io.BytesIO(vary_book(raw, i))) for i in range(3)]
+    first_qty = [b[0]["quantity"] for b in books]
+    assert len(set(first_qty)) == 3
+    # everything else is untouched
+    assert [p["symbol"] for p in books[0]] == [p["symbol"] for p in books[2]]
+    assert [p["quantity"] for p in books[0][1:]] == [p["quantity"] for p in books[2][1:]]
