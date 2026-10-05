@@ -15,6 +15,13 @@ class Settings(BaseSettings):
     cors_origins: list[str] = ["http://localhost:5173"]
     # default matches the docker-compose postgres service
     database_url: str = "postgresql+psycopg://quantly:quantly@localhost:5432/quantly"
+    # connection pool per process. fastapi runs sync endpoints on a 40 thread
+    # pool, so the api needs up to 40 connections under load or requests queue
+    # behind the pool. size postgres max_connections for api replicas x this.
+    db_pool_size: int = 10
+    db_max_overflow: int = 30
+    # fail a request that cannot get a connection quickly, rather than at 30s
+    db_pool_timeout_seconds: float = 5
 
     # object storage. defaults point at the local s3 stand-in in docker-compose,
     # which accepts any credentials. in prod, unset the endpoint url and let the
