@@ -35,6 +35,10 @@ jobs:
         run: pip install -r backend/requirements/api.txt
 
       - name: Start the stack
+        env:
+          # recover killed jobs within the run instead of after the 15 min default
+          QUANTLY_STUCK_AFTER_SECONDS: "60"
+          QUANTLY_SWEEPER_INTERVAL_SECONDS: "15"
         run: docker compose up -d --build --wait postgres redis s3 worker beat
 
       - name: Migrate and start the api
