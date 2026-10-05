@@ -161,7 +161,12 @@ export function setup() {
     const body = JSON.stringify({ email, password: PASSWORD });
     const type = { headers: { "Content-Type": "application/json" } };
     // 409 means a previous run already registered this user
-    const reg = http.post(`${BASE_URL}/auth/register`, body, { ...type, tags: status("setup") });
+    const reg = http.post(`${BASE_URL}/auth/register`, body, {
+      ...type,
+      tags: status("setup"),
+      // a 409 is expected on reruns, keep it out of the error rate
+      responseCallback: http.expectedStatuses(201, 409),
+    });
     if (reg.status !== 201 && reg.status !== 409) {
       exec.test.abort(`register failed: ${reg.status} ${reg.body}`);
     }
