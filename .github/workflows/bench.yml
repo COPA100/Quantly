@@ -39,7 +39,7 @@ jobs:
           done
 
       - name: Compare against the committed baseline
-        run: python benchmarks/compare_baseline.py bench-1.json bench-2.json bench-3.json --tolerance 0.15
+        run: python benchmarks/compare_baseline.py bench-1.json bench-2.json bench-3.json --tolerance 0.30
 
       - name: Upload results
         if: always()

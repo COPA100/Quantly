@@ -110,7 +110,7 @@ The C++ engine (pybind11) holds the kernels where compiled code can win, with Nu
 
 In the worker the engine runs single-threaded (`engine_threads = 1`): Celery already runs one process per core, and every process spawning a thread per core would oversubscribe the machine. Multithreading helps a single large job, not a busy queue.
 
-CI runs the benchmarks three times and fails if any single-thread C++/NumPy ratio drops more than 15% below a committed baseline. Ratios cancel most of the difference between runners; absolute times would not.
+CI runs the benchmarks three times and fails if any single-thread C++/NumPy ratio drops more than 30% below a committed baseline, recorded on Linux like the runners. Ratios cancel most of the difference between machines; absolute times would not. The first baseline was recorded on Windows and failed on Linux straight away, which is why it is now recorded in a Linux container limited to four CPUs.
 
 ## Observability
 

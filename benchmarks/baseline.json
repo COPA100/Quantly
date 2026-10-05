@@ -1,19 +1,19 @@
 {
   "note": "numpy time / C++ time on one machine; regenerate with compare_baseline.py --update after an intentional change",
   "environment": {
-    "python": "3.14.0",
+    "python": "3.13.16",
     "numpy": "2.3.4",
-    "platform": "Windows-11-10.0.26200-SP0",
+    "platform": "Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-glibc2.41",
     "cpu": "Intel(R) Core(TM) Ultra 9 185H",
     "logical_cpus": 22,
     "engine_threads": 22
   },
   "ratios": {
-    "drawdown_5040": 43.1,
-    "correlation_100_1t": 0.58,
+    "drawdown_5040": 41.52,
+    "correlation_100_1t": 0.37,
     "correlation_500_1t": 0.27,
-    "mc_var_20k_1t": 1.02,
-    "mc_var_100k_1t": 0.98,
-    "qmc_var_100k_1t": 1.46
+    "mc_var_20k_1t": 0.78,
+    "mc_var_100k_1t": 0.9,
+    "qmc_var_100k_1t": 1.42
   }
 }
