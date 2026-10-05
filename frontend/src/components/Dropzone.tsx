@@ -35,14 +35,21 @@ export default function Dropzone({ onFile, accept = '.csv' }: Props) {
       onDrop={handleDrop}
       onClick={() => inputRef.current?.click()}
       onKeyDown={handleKeyDown}
-      className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-12 text-center transition ${
-        dragging
-          ? 'border-indigo-400 bg-indigo-50'
-          : 'border-slate-300 bg-white hover:border-slate-400'
+      className={`flex min-h-[320px] cursor-pointer flex-col items-center justify-center rounded-[var(--radius-panel)] border border-dashed px-6 text-center transition-colors ${
+        dragging ? 'border-ink bg-surface' : 'border-hairline-strong bg-canvas-soft hover:border-ink'
       }`}
     >
-      <p className="text-sm font-medium text-slate-700">Drop your holdings CSV here</p>
-      <p className="mt-1 text-xs text-slate-500">or click to browse</p>
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true" className="text-muted">
+        <path
+          d="M12 15V4m0 0-4 4m4-4 4 4M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+      <p className="mt-4 text-[17px] text-ink">Drop your positions CSV here</p>
+      <p className="mt-1 text-sm text-muted">or click to choose a file</p>
       <input
         ref={inputRef}
         type="file"

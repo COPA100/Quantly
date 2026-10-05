@@ -13,15 +13,15 @@ export default function GoogleAuthSection() {
     <div className="mt-5">
       <div className="relative my-4">
         <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-slate-200" />
+          <div className="w-full border-t border-hairline" />
         </div>
         <div className="relative flex justify-center">
-          <span className="bg-white px-2 text-xs text-slate-400">or</span>
+          <span className="bg-canvas px-2 text-xs text-muted-soft">or</span>
         </div>
       </div>
       <GoogleSignInButton onCredential={(token) => mutation.mutate(token)} />
       {mutation.isError && (
-        <p className="mt-2 text-center text-sm text-red-600">{errorMessage(mutation.error)}</p>
+        <p className="mt-2 text-center text-sm text-loss">{errorMessage(mutation.error)}</p>
       )}
     </div>
   )

@@ -2,12 +2,12 @@ import { formatPercent } from '../lib/format'
 import { MARKERS, type FrontierMarker, type FrontierResult } from '../lib/frontier'
 
 const W = 640
-const H = 360
+const H = 380
 const M = { top: 16, right: 20, bottom: 48, left: 60 }
 const TICKS = 5
 
 function Shape({ shape, x, y, color }: { shape: FrontierMarker['shape']; x: number; y: number; color: string }) {
-  const common = { fill: color, stroke: '#ffffff', strokeWidth: 1.5 }
+  const common = { fill: color, stroke: '#ffffff', strokeWidth: 2 }
   switch (shape) {
     case 'square':
       return <rect x={x - 5} y={y - 5} width={10} height={10} {...common} />
@@ -56,35 +56,35 @@ export default function FrontierChart({ frontier }: { frontier: FrontierResult }
       >
         {ticks(y0, y1).map((t) => (
           <g key={`y${t}`}>
-            <line x1={M.left} x2={W - M.right} y1={sy(t)} y2={sy(t)} stroke="#e2e8f0" />
-            <text x={M.left - 8} y={sy(t)} textAnchor="end" dominantBaseline="middle" className="fill-slate-500 text-[11px]">
+            <line x1={M.left} x2={W - M.right} y1={sy(t)} y2={sy(t)} stroke="#efeee8" />
+            <text x={M.left - 8} y={sy(t)} textAnchor="end" dominantBaseline="middle" className="fill-muted font-mono text-[11px]">
               {formatPercent(t, tickDigits(y0, y1))}
             </text>
           </g>
         ))}
         {ticks(x0, x1).map((t) => (
-          <text key={`x${t}`} x={sx(t)} y={H - M.bottom + 18} textAnchor="middle" className="fill-slate-500 text-[11px]">
+          <text key={`x${t}`} x={sx(t)} y={H - M.bottom + 18} textAnchor="middle" className="fill-muted font-mono text-[11px]">
             {formatPercent(t, tickDigits(x0, x1))}
           </text>
         ))}
-        <text x={(M.left + W - M.right) / 2} y={H - 8} textAnchor="middle" className="fill-slate-600 text-xs">
+        <text x={(M.left + W - M.right) / 2} y={H - 8} textAnchor="middle" className="fill-body text-xs">
           Volatility (annualized)
         </text>
         <text
           transform={`translate(14 ${(M.top + H - M.bottom) / 2}) rotate(-90)`}
           textAnchor="middle"
-          className="fill-slate-600 text-xs"
+          className="fill-body text-xs"
         >
           Expected return (annualized)
         </text>
-        <polyline points={line} fill="none" stroke="#94a3b8" strokeWidth={2} />
+        <polyline points={line} fill="none" stroke="#26251e" strokeWidth={1.75} strokeLinejoin="round" />
         {marked.map((m) => (
           <Shape key={m.key} shape={m.shape} x={sx(m.vol)} y={sy(m.ret)} color={m.color} />
         ))}
       </svg>
-      <figcaption className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-xs text-slate-600">
+      <figcaption className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-[13px] text-body">
         <span className="inline-flex items-center gap-1.5">
-          <span className="inline-block h-0.5 w-4 bg-slate-400" />
+          <span className="inline-block h-0.5 w-4 bg-ink" />
           Efficient frontier
         </span>
         {marked.map((m) => (

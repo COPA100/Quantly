@@ -30,8 +30,10 @@ describe('FactorSection', () => {
     }
     render(<FactorSection analytics={analytics} />)
     expect(screen.getByText(/Tilted toward small caps/)).toBeTruthy()
-    expect(screen.getByText('Market')).toBeTruthy()
-    expect(screen.getByText('Momentum')).toBeTruthy()
+    // each factor has a loading row and a line in the glossary
+    expect(screen.getAllByText('Market')).toHaveLength(2)
+    expect(screen.getAllByText('Momentum')).toHaveLength(2)
+    expect(screen.getByRole('img', { name: /Market beta 1.00/ })).toBeTruthy()
     expect(screen.getByText('2.1%')).toBeTruthy()
     expect(screen.getByText('0.83')).toBeTruthy()
     expect(screen.getAllByRole('img')).toHaveLength(6)

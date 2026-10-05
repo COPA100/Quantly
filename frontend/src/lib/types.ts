@@ -27,6 +27,8 @@ export interface PortfolioAccepted {
 export interface Job {
   id: number
   status: string
+  // delivery attempts so far; above 1 means the job is being retried
+  attempts?: number
   started_at: string | null
   finished_at: string | null
 }

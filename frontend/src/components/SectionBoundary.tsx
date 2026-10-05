@@ -15,7 +15,7 @@ export default class SectionBoundary extends Component<Props, { failed: boolean 
 
   render() {
     if (this.state.failed) {
-      return <p className="text-sm text-slate-500">Couldn't display {this.props.name}.</p>
+      return <p className="text-sm text-muted">Couldn't display {this.props.name}.</p>
     }
     return this.props.children
   }

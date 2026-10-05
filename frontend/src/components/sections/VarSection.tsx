@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { formatPercent } from '../../lib/format'
 import { metric } from '../../lib/metrics'
 import type { Analytics } from '../../lib/types'
-import Section from '../Section'
+import Panel from '../Panel'
 
 interface Estimate {
   var: number
@@ -44,41 +44,39 @@ const CONFIDENCES = ['0.95', '0.99']
 
 function MethodTable({ cells }: { cells: Record<string, Cell> }) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
-      <table className="w-full text-sm">
-        <thead className="text-left text-xs uppercase tracking-wide text-slate-500">
-          <tr>
-            <th className="px-4 py-2 font-medium">Method</th>
-            {CONFIDENCES.map((c) => (
-              <th key={c} className="px-4 py-2 text-right font-medium">
-                {Math.round(Number(c) * 100)}% VaR / ES
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {METHOD_LABELS.map(([key, label]) => (
-            <tr key={key} className="border-t border-slate-100">
-              <td className="px-4 py-2 text-slate-700">{label}</td>
-              {CONFIDENCES.map((c) => {
-                const e = cells[c]?.[key]
-                return (
-                  <td key={c} className="px-4 py-2 text-right tabular-nums text-slate-900">
-                    {e ? `${formatPercent(e.var, 2)} / ${formatPercent(e.es, 2)}` : '-'}
-                  </td>
-                )
-              })}
-            </tr>
+    <table className="w-full text-sm">
+      <thead>
+        <tr className="text-left text-[13px] text-muted">
+          <th scope="col" className="px-5 py-3 font-normal">Method</th>
+          {CONFIDENCES.map((c) => (
+            <th key={c} scope="col" className="px-5 py-3 text-right font-normal">
+              {Math.round(Number(c) * 100)}% VaR / ES
+            </th>
           ))}
-        </tbody>
-      </table>
-    </div>
+        </tr>
+      </thead>
+      <tbody>
+        {METHOD_LABELS.map(([key, label]) => (
+          <tr key={key} className="border-t border-hairline-soft">
+            <td className="px-5 py-3 text-ink">{label}</td>
+            {CONFIDENCES.map((c) => {
+              const e = cells[c]?.[key]
+              return (
+                <td key={c} className="num px-5 py-3 text-right text-ink">
+                  {e ? `${formatPercent(e.var, 2)} / ${formatPercent(e.es, 2)}` : '-'}
+                </td>
+              )
+            })}
+          </tr>
+        ))}
+      </tbody>
+    </table>
   )
 }
 
-const W = 640
-const H = 220
-const PAD = { left: 44, right: 8, top: 8, bottom: 20 }
+const W = 760
+const H = 240
+const PAD = { left: 48, right: 8, top: 10, bottom: 22 }
 
 function BacktestChart({ bt }: { bt: Backtest }) {
   const n = bt.returns.length
@@ -96,13 +94,13 @@ function BacktestChart({ bt }: { bt: Backtest }) {
     <svg
       viewBox={`0 0 ${W} ${H}`}
       role="img"
-      aria-label="Daily returns against the one-day 95% VaR forecast, breaches in red"
-      className="w-full rounded-xl border border-slate-200 bg-white"
+      aria-label="Daily returns against the one-day 95% VaR forecast, breaches marked"
+      className="w-full"
     >
       {[hi, 0, lo].map((tick) => (
         <g key={tick}>
-          <line x1={PAD.left} x2={W - PAD.right} y1={y(tick)} y2={y(tick)} stroke="#e2e8f0" />
-          <text x={PAD.left - 6} y={y(tick) + 3} textAnchor="end" fontSize="10" fill="#64748b">
+          <line x1={PAD.left} x2={W - PAD.right} y1={y(tick)} y2={y(tick)} stroke="#efeee8" />
+          <text x={PAD.left - 8} y={y(tick) + 3} textAnchor="end" className="fill-muted font-mono text-[12px]">
             {formatPercent(tick, 1)}
           </text>
         </g>
@@ -115,14 +113,14 @@ function BacktestChart({ bt }: { bt: Backtest }) {
           y={Math.min(y(r), y(0))}
           width={barW}
           height={Math.max(Math.abs(y(r) - y(0)), 0.5)}
-          fill={breaches.has(i) ? '#dc2626' : '#94a3b8'}
+          fill={breaches.has(i) ? '#cf2d56' : '#cfcdc4'}
         />
       ))}
-      <polyline points={line} fill="none" stroke="#2563eb" strokeWidth="1.5" />
-      <text x={PAD.left} y={H - 6} fontSize="10" fill="#64748b">
+      <polyline points={line} fill="none" stroke="#26251e" strokeWidth="1.5" />
+      <text x={PAD.left} y={H - 5} className="fill-muted font-mono text-[12px]">
         {bt.dates[0]}
       </text>
-      <text x={W - PAD.right} y={H - 6} textAnchor="end" fontSize="10" fill="#64748b">
+      <text x={W - PAD.right} y={H - 5} textAnchor="end" className="fill-muted font-mono text-[12px]">
         {bt.dates[n - 1]}
       </text>
     </svg>
@@ -132,24 +130,24 @@ function BacktestChart({ bt }: { bt: Backtest }) {
 function BacktestPanel({ suite }: { suite: VarSuite }) {
   const bt = suite.backtest
   if (!bt) {
-    return (
-      <p className="text-sm text-slate-500">{suite.backtest_reason ?? 'Backtest unavailable.'}</p>
-    )
+    return <p className="text-sm text-body">{suite.backtest_reason ?? 'Backtest unavailable.'}</p>
   }
   return (
-    <div className="space-y-3">
-      <p className="text-sm text-slate-600">{bt.verdict}</p>
-      <BacktestChart bt={bt} />
-      <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-slate-500">
-        <span className="flex items-center gap-1">
-          <span className="inline-block h-0.5 w-4 bg-blue-600" /> 1-day 95% VaR
+    <div>
+      <p className="max-w-[68ch] text-[15px] text-body">{bt.verdict}</p>
+      <div className="mt-4">
+        <BacktestChart bt={bt} />
+      </div>
+      <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-[13px] text-muted">
+        <span className="flex items-center gap-2">
+          <span className="inline-block h-0.5 w-4 bg-ink" /> 1-day 95% VaR
         </span>
-        <span className="flex items-center gap-1">
-          <span className="inline-block h-2 w-2 bg-red-600" />
+        <span className="flex items-center gap-2">
+          <span className="inline-block h-2 w-2 bg-loss" />
           {`breach (${bt.exceptions} of ${bt.n}, ${bt.expected.toFixed(0)} expected)`}
         </span>
-        <span>Kupiec p = {bt.kupiec.p.toFixed(2)}</span>
-        <span>Christoffersen p = {bt.christoffersen.p.toFixed(2)}</span>
+        <span className="num">Kupiec p = {bt.kupiec.p.toFixed(2)}</span>
+        <span className="num">Christoffersen p = {bt.christoffersen.p.toFixed(2)}</span>
       </div>
     </div>
   )
@@ -161,29 +159,32 @@ export default function VarSection({ analytics }: { analytics: Analytics }) {
   if (!suite?.methods) return null
   const cells = suite.methods[horizon] ?? suite.methods[HORIZONS[0]]
 
+  const toggle = (
+    <div className="inline-flex rounded-[var(--radius-control)] border border-hairline bg-surface p-0.5 text-[13px]">
+      {HORIZONS.map((h) => (
+        <button
+          key={h}
+          type="button"
+          aria-pressed={h === horizon}
+          onClick={() => setHorizon(h)}
+          className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
+            h === horizon ? 'bg-ink text-canvas' : 'text-muted hover:text-ink'
+          }`}
+        >
+          {h === '1d' ? '1 day' : '21 days'}
+        </button>
+      ))}
+    </div>
+  )
+
   return (
-    <Section title="Value at risk methods">
-      <p className="mb-3 text-sm text-slate-600">{suite.insight}</p>
-      <div className="mb-2 inline-flex rounded-lg border border-slate-200 bg-white p-0.5 text-xs">
-        {HORIZONS.map((h) => (
-          <button
-            key={h}
-            type="button"
-            aria-pressed={h === horizon}
-            onClick={() => setHorizon(h)}
-            className={`rounded-md px-3 py-1 font-medium ${
-              h === horizon ? 'bg-slate-900 text-white' : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            {h === '1d' ? '1 day' : '21 days'}
-          </button>
-        ))}
-      </div>
+    <Panel title="Value at risk" lede={suite.insight} actions={toggle}>
       {cells && <MethodTable cells={cells} />}
-      <h3 className="mb-2 mt-6 text-xs font-semibold uppercase tracking-wide text-slate-500">
-        Backtest, last two years
-      </h3>
-      <BacktestPanel suite={suite} />
-    </Section>
+      <div className="border-t border-hairline p-5">
+        <h3 className="text-[15px] font-medium text-ink">Did the forecast hold up?</h3>
+        <p className="mb-3 text-[13px] text-muted">Backtest over the last two years</p>
+        <BacktestPanel suite={suite} />
+      </div>
+    </Panel>
   )
 }

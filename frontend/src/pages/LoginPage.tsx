@@ -31,11 +31,11 @@ export default function LoginPage() {
   return (
     <AuthLayout
       title="Sign in"
-      subtitle="Welcome back to Quantly"
+      subtitle="Sign in to see your portfolios."
       footer={
         <span>
           Don&apos;t have an account?{' '}
-          <Link to="/register" className="font-medium text-indigo-600 hover:underline">
+          <Link to="/register" className="font-medium text-ink underline decoration-hairline-strong underline-offset-4 hover:decoration-ink">
             Create one
           </Link>
         </span>
@@ -61,10 +61,10 @@ export default function LoginPage() {
           onChange={(e) => setPassword(e.target.value)}
         />
         {mutation.isError && (
-          <p className="text-sm text-red-600">{errorMessage(mutation.error)}</p>
+          <p className="text-sm text-loss">{errorMessage(mutation.error)}</p>
         )}
         <Button type="submit" className="w-full" disabled={mutation.isPending}>
-          {mutation.isPending ? 'Signing in…' : 'Sign in'}
+          {mutation.isPending ? 'Signing in' : 'Sign in'}
         </Button>
       </form>
       <GoogleAuthSection />

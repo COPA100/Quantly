@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import StressSection from './StressSection'
 
@@ -31,14 +31,23 @@ const stress = {
 }
 
 describe('StressSection', () => {
-  it('renders insight, bars and the proxy note only where proxied', () => {
+  it('opens on the worst scenario, with its proxy note', () => {
     render(<StressSection analytics={{ stress }} />)
     expect(screen.getByText(/lost about 22%/)).toBeTruthy()
-    expect(screen.getByText('COVID crash')).toBeTruthy()
-    expect(screen.getByText('-22.0%')).toBeTruthy()
-    expect(screen.getAllByText('S&P 500')).toHaveLength(2)
-    expect(screen.getAllByText(/estimated from beta/)).toHaveLength(1)
+    // listed once and shown in the detail panel
+    expect(screen.getAllByText('COVID crash')).toHaveLength(2)
+    expect(screen.getByRole('heading', { name: 'COVID crash' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /COVID crash/, pressed: true })).toBeTruthy()
+    expect(screen.getAllByText('-22.0%').length).toBeGreaterThan(0)
     expect(screen.getByText('40% of the book estimated from beta')).toBeTruthy()
+  })
+
+  it('shows the scenario you pick', () => {
+    render(<StressSection analytics={{ stress }} />)
+    fireEvent.click(screen.getByRole('button', { name: /2022 rate shock/ }))
+    expect(screen.getByRole('heading', { name: '2022 rate shock' })).toBeTruthy()
+    // nothing in that scenario was estimated
+    expect(screen.queryByText(/estimated from beta/)).toBeNull()
   })
 
   it('renders nothing when missing, errored or empty', () => {

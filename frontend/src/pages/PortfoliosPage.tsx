@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { buttonClass } from '../components/Button'
+import { buttonVariants } from '../lib/ui'
+import Spinner from '../components/Spinner'
 import StatusBadge from '../components/StatusBadge'
 import { errorMessage } from '../lib/api'
 import { formatDate } from '../lib/format'
@@ -8,52 +9,66 @@ import { listPortfolios } from '../lib/portfolio-api'
 
 export default function PortfoliosPage() {
   const query = useQuery({ queryKey: ['portfolios'], queryFn: listPortfolios })
+  const portfolios = query.data ?? []
 
   return (
     <div>
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-slate-900">Portfolios</h1>
-        <Link to="/upload" className={buttonClass}>
-          Upload
-        </Link>
-      </div>
+      <h1 className="display-xl text-ink">Portfolios</h1>
+      <p className="mt-2 max-w-[60ch] text-body">
+        Each upload is a snapshot of your holdings, analyzed against up to twenty years of daily
+        prices.
+      </p>
 
-      <div className="mt-6">
-        {query.isPending && <p className="text-sm text-slate-500">Loading…</p>}
+      <div className="mt-10">
+        {query.isPending && <Spinner />}
 
-        {query.isError && <p className="text-sm text-red-600">{errorMessage(query.error)}</p>}
+        {query.isError && <p className="text-loss">{errorMessage(query.error)}</p>}
 
-        {query.data?.length === 0 && (
-          <div className="rounded-xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center">
-            <p className="text-sm text-slate-600">No portfolios yet.</p>
-            <Link
-              to="/upload"
-              className="mt-2 inline-block text-sm font-medium text-indigo-600 hover:underline"
-            >
-              Upload your first one
+        {query.isSuccess && portfolios.length === 0 && (
+          <div className="max-w-xl rounded-[var(--radius-panel)] border border-hairline bg-surface p-8">
+            <h2 className="display-md text-ink">Start with a positions export</h2>
+            <p className="mt-2 text-body">
+              Download your holdings as a CSV from your brokerage and upload it here. The analysis
+              takes about a minute.
+            </p>
+            <Link to="/upload" className={`${buttonVariants.primary} mt-6`}>
+              Upload portfolio
             </Link>
           </div>
         )}
 
-        {query.data && query.data.length > 0 && (
-          <ul className="divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-white">
-            {query.data.map((portfolio) => (
-              <li key={portfolio.id}>
-                <Link
-                  to={`/portfolios/${portfolio.id}`}
-                  className="flex items-center justify-between px-4 py-3 hover:bg-slate-50"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-slate-900">
-                      {portfolio.original_filename}
-                    </p>
-                    <p className="text-xs text-slate-500">{formatDate(portfolio.created_at)}</p>
-                  </div>
-                  <StatusBadge status={portfolio.status} />
-                </Link>
-              </li>
-            ))}
-          </ul>
+        {portfolios.length > 0 && (
+          <div className="overflow-hidden rounded-[var(--radius-panel)] border border-hairline bg-surface">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-[13px] text-muted">
+                  <th scope="col" className="px-5 py-3 font-normal">Portfolio</th>
+                  <th scope="col" className="hidden px-5 py-3 font-normal sm:table-cell">Uploaded</th>
+                  <th scope="col" className="px-5 py-3 text-right font-normal">Analysis</th>
+                </tr>
+              </thead>
+              <tbody>
+                {portfolios.map((portfolio) => (
+                  <tr key={portfolio.id} className="group border-t border-hairline-soft">
+                    <td className="px-5 py-0">
+                      <Link
+                        to={`/portfolios/${portfolio.id}`}
+                        className="block py-4 text-[15px] text-ink group-hover:underline group-hover:decoration-hairline-strong group-hover:underline-offset-4"
+                      >
+                        {portfolio.original_filename.replace(/\.csv$/i, '')}
+                      </Link>
+                    </td>
+                    <td className="num hidden px-5 py-4 text-[13px] text-muted sm:table-cell">
+                      {formatDate(portfolio.created_at)}
+                    </td>
+                    <td className="px-5 py-4 text-right">
+                      <StatusBadge status={portfolio.status} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { type Tone, toneTextColor } from './tone'
+import { type Tone, toneOf, toneTextColor } from './tone'
 
 describe('toneTextColor', () => {
   it('has a distinct class for every tone', () => {
@@ -9,8 +9,14 @@ describe('toneTextColor', () => {
     classes.forEach((c) => expect(c).toMatch(/^text-/))
   })
 
-  it('maps positive to green and negative to red', () => {
-    expect(toneTextColor.positive).toContain('emerald')
-    expect(toneTextColor.negative).toContain('red')
+  it('maps positive to the gain colour and negative to the loss colour', () => {
+    expect(toneTextColor.positive).toBe('text-gain')
+    expect(toneTextColor.negative).toBe('text-loss')
+  })
+
+  it('reads the tone from the sign', () => {
+    expect(toneOf(0.1)).toBe('positive')
+    expect(toneOf(-0.1)).toBe('negative')
+    expect(toneOf(0)).toBe('neutral')
   })
 })

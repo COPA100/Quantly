@@ -4,9 +4,10 @@ import { useEffect, useRef } from 'react'
 interface Props {
   dates: string[]
   values: number[]
+  height?: number
 }
 
-export default function EquityChart({ dates, values }: Props) {
+export default function EquityChart({ dates, values, height = 340 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -14,25 +15,36 @@ export default function EquityChart({ dates, values }: Props) {
     if (!el) return
 
     const chart = createChart(el, {
-      height: 280,
+      height,
       autoSize: true,
       layout: {
         background: { color: 'transparent' },
-        textColor: '#64748b',
+        textColor: '#807d72',
+        fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+        fontSize: 11,
         attributionLogo: false,
       },
       grid: {
-        vertLines: { color: '#f1f5f9' },
-        horzLines: { color: '#f1f5f9' },
+        vertLines: { visible: false },
+        horzLines: { color: '#efeee8' },
       },
-      rightPriceScale: { borderColor: '#e2e8f0' },
-      timeScale: { borderColor: '#e2e8f0' },
+      rightPriceScale: { borderVisible: false },
+      timeScale: { borderColor: '#e6e5e0' },
+      // compact dollars on the axis, full dollars on the crosshair label
+      localization: {
+        priceFormatter: (v: number) =>
+          v >= 1e6 ? `$${(v / 1e6).toFixed(2)}M` : `$${Math.round(v / 1e3).toLocaleString()}k`,
+      },
+      crosshair: {
+        vertLine: { color: '#cfcdc4', labelBackgroundColor: '#26251e' },
+        horzLine: { color: '#cfcdc4', labelBackgroundColor: '#26251e' },
+      },
     })
 
     const series = chart.addSeries(AreaSeries, {
-      lineColor: '#6366f1',
-      topColor: 'rgba(99, 102, 241, 0.3)',
-      bottomColor: 'rgba(99, 102, 241, 0.02)',
+      lineColor: '#26251e',
+      topColor: 'rgba(38, 37, 30, 0.10)',
+      bottomColor: 'rgba(38, 37, 30, 0)',
       lineWidth: 2,
       priceLineVisible: false,
     })
@@ -40,7 +52,7 @@ export default function EquityChart({ dates, values }: Props) {
     chart.timeScale().fitContent()
 
     return () => chart.remove()
-  }, [dates, values])
+  }, [dates, values, height])
 
   return <div ref={containerRef} className="w-full" />
 }

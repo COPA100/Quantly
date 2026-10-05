@@ -31,11 +31,11 @@ export default function RegisterPage() {
   return (
     <AuthLayout
       title="Create your account"
-      subtitle="Start analyzing your portfolio"
+      subtitle="Create an account to upload and analyze a portfolio."
       footer={
         <span>
           Already have an account?{' '}
-          <Link to="/login" className="font-medium text-indigo-600 hover:underline">
+          <Link to="/login" className="font-medium text-ink underline decoration-hairline-strong underline-offset-4 hover:decoration-ink">
             Sign in
           </Link>
         </span>
@@ -61,9 +61,9 @@ export default function RegisterPage() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
-        <p className="text-xs text-slate-500">At least 8 characters.</p>
+        <p className="text-xs text-muted">At least 8 characters.</p>
         {mutation.isError && (
-          <p className="text-sm text-red-600">{errorMessage(mutation.error)}</p>
+          <p className="text-sm text-loss">{errorMessage(mutation.error)}</p>
         )}
         <Button type="submit" className="w-full" disabled={mutation.isPending}>
           {mutation.isPending ? 'Creating account…' : 'Create account'}
