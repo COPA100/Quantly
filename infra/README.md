@@ -31,7 +31,7 @@ The stack is built to be **stood up for a demo and torn down afterwards**, not r
 | RDS Postgres 16 | `modules/rds` | `db.t4g.micro`, single-AZ, no public IP. |
 | ElastiCache Redis | `modules/redis` | `cache.t4g.micro`, single node. Celery broker + price cache. |
 | ECR repositories | `modules/ecr` | One each for the api and worker images, last 5 images kept. |
-| Fargate service | `modules/ecs-service` | Reusable. Task definition, service, IAM roles and log group. Instantiated twice in `ecs.tf`. |
+| Fargate service | `modules/ecs-service` | Reusable. Task definition, service, IAM roles and log group. Instantiated three times in `ecs.tf`: api, worker, and beat (the worker image running the outbox relay and stuck-job sweeper schedule). |
 | ECS cluster, secrets, the two services | `ecs.tf` | |
 | Application load balancer | `alb.tf` | In front of the api only. The worker has no inbound at all. |
 | Task role policies | `iam.tf` | What each service's code may call. |
@@ -283,8 +283,9 @@ Rough on-demand prices in `us-east-1`. Check the AWS pricing pages before relyin
 | ElastiCache `cache.t4g.micro` | ~$12 |
 | api task (0.25 vCPU / 0.5 GB) | ~$9 |
 | worker task (1 vCPU / 2 GB, Spot) | ~$11 |
-| Public IPv4 addresses (2 for the ALB, 1 per task) | ~$15 |
+| beat task (0.25 vCPU / 0.5 GB) | ~$9 |
+| Public IPv4 addresses (2 for the ALB, 1 per task) | ~$18 |
 | S3, ECR, logs, SSM | cents |
-| **Total** | **~$75** |
+| **Total** | **~$90** |
 
 A NAT gateway would add ~$32/month per AZ on top, which is why there isn't one. Run for a two-hour demo and destroyed, the whole stack costs well under a dollar.

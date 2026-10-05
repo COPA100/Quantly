@@ -50,11 +50,16 @@ output "worker_service_name" {
   value = module.worker.service_name
 }
 
+output "beat_service_name" {
+  value = module.beat.service_name
+}
+
 output "log_group_names" {
   description = "tail with `aws logs tail <name> --follow`"
   value = {
     api    = module.api.log_group_name
     worker = module.worker.log_group_name
+    beat   = module.beat.log_group_name
   }
 }
 

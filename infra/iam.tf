@@ -19,6 +19,19 @@ locals {
   })
 
   # the worker only ever reads it back to run the analysis
+  # beat only schedules tasks over redis
+  beat_task_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid      = "NoAwsAccess"
+        Effect   = "Deny"
+        Action   = "*"
+        Resource = "*"
+      }
+    ]
+  })
+
   worker_task_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [

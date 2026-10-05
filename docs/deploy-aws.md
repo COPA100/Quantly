@@ -6,7 +6,7 @@ The stack is built to be stood up for a demo and destroyed afterwards. Day-to-da
 
 | | Approx. |
 |---|---|
-| Left running for a month | ~$75 (ALB ~$16, RDS ~$14, ElastiCache ~$12, the two Fargate tasks ~$20, public IPv4 ~$15) |
+| Left running for a month | ~$90 (ALB ~$16, RDS ~$14, ElastiCache ~$12, the three Fargate tasks ~$29, public IPv4 ~$18) |
 | A two-hour demo, then destroyed | well under $1 |
 | Torn down | $0 for the stack. The state bucket and budget alarm stay, and cost cents at most. |
 

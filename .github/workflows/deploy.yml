@@ -132,7 +132,7 @@ jobs:
         run: |
           aws ecs wait services-stable \
             --cluster "$(terraform output -raw ecs_cluster_name)" \
-            --services "$(terraform output -raw api_service_name)" "$(terraform output -raw worker_service_name)"
+            --services "$(terraform output -raw api_service_name)" "$(terraform output -raw worker_service_name)"               "$(terraform output -raw beat_service_name)"
 
       - name: Smoke test
         run: |

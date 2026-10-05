@@ -140,3 +140,33 @@ module "worker" {
 
   depends_on = [aws_ecs_cluster_capacity_providers.this]
 }
+
+# ---- beat: schedules the outbox relay and the stuck-portfolio sweeper ----
+# exactly one should run, so it stays on regular fargate rather than spot. it
+# only talks to redis, so its task role allows no aws calls.
+module "beat" {
+  source = "./modules/ecs-service"
+
+  name        = "${local.name}-beat"
+  cluster_arn = aws_ecs_cluster.this.arn
+  image       = "${module.ecr.repository_urls["worker"]}:${var.image_tag}"
+  command     = ["celery", "-A", "worker.celery_app", "beat", "--loglevel=info", "--schedule=/tmp/celerybeat-schedule"]
+
+  cpu           = var.beat_cpu
+  memory        = var.beat_memory
+  desired_count = 1
+
+  subnet_ids         = module.network.public_subnet_ids
+  security_group_ids = [module.network.worker_security_group_id]
+
+  environment = local.common_environment
+  secrets     = {}
+
+  ecr_repository_arn = module.ecr.repository_arns["worker"]
+  task_policy_json   = local.beat_task_policy
+
+  aws_region         = var.aws_region
+  log_retention_days = var.log_retention_days
+
+  depends_on = [aws_ecs_cluster_capacity_providers.this]
+}

@@ -94,6 +94,18 @@ variable "worker_capacity_provider" {
   default     = "FARGATE_SPOT"
 }
 
+variable "beat_cpu" {
+  description = "beat task cpu units, it only schedules the outbox relay and sweeper"
+  type        = number
+  default     = 256
+}
+
+variable "beat_memory" {
+  description = "beat task memory in mib"
+  type        = number
+  default     = 512
+}
+
 variable "log_retention_days" {
   description = "days to keep api and worker container logs in cloudwatch"
   type        = number
