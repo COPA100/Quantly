@@ -1,6 +1,8 @@
-from collections.abc import Generator
+from collections.abc import Generator, Iterable
+from typing import Any
 
 from sqlalchemy import create_engine
+from sqlalchemy.dialects import postgresql, sqlite
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from common.config import get_settings
@@ -22,3 +24,14 @@ def get_db() -> Generator[Session]:
         yield db
     finally:
         db.close()
+
+
+def insert_ignore(db: Session, model: type[Base], rows: Iterable[dict[str, Any]]) -> None:
+    # insert rows, skipping any whose primary key already exists. shared tables
+    # (prices, factors) can be filled by two jobs at once, and the loser of that
+    # race must not fail its whole analysis on a duplicate key.
+    rows = list(rows)
+    if not rows:
+        return
+    dialect = postgresql if db.get_bind().dialect.name == "postgresql" else sqlite
+    db.execute(dialect.insert(model).values(rows).on_conflict_do_nothing())

@@ -154,3 +154,20 @@ def test_new_bars_are_visible_in_the_same_session_without_autoflush(db_engine, m
         db.close()
         transaction.rollback()
         connection.close()
+
+
+def test_storing_the_same_bars_twice_is_not_an_error(db_session):
+    # two jobs fetching the same new ticker at once both insert its bars; the
+    # second must skip the duplicates instead of failing its analysis
+    bars = [bar(date(2026, 7, 20)), bar(date(2026, 7, 21))]
+    history.store_bars(db_session, "DUPE", bars)
+    history.store_bars(db_session, "DUPE", bars + [bar(date(2026, 7, 22))])
+    dates = list(db_session.scalars(select(Price.date).where(Price.ticker == "DUPE")))
+    assert sorted(dates) == [date(2026, 7, 20), date(2026, 7, 21), date(2026, 7, 22)]
+
+
+def test_marking_backfilled_twice_updates_in_place(db_session):
+    history._mark_backfilled(db_session, "DUPE", date(2010, 1, 1))
+    history._mark_backfilled(db_session, "DUPE", date(2007, 1, 1))
+    db_session.expire_all()
+    assert db_session.get(TickerMeta, "DUPE").backfilled_from == date(2007, 1, 1)

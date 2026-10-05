@@ -1,9 +1,10 @@
 from datetime import date, timedelta
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from common.config import get_settings
+from common.db import insert_ignore
 from common.market_data.fetcher import fetch_history
 from common.models import Price, TickerMeta
 
@@ -14,22 +15,11 @@ def latest_stored_date(db: Session, ticker: str) -> date | None:
 
 def store_bars(db: Session, ticker: str, bars: list[dict]) -> None:
     ticker = ticker.upper()
-    for bar in bars:
-        db.add(
-            Price(
-                ticker=ticker,
-                date=bar["date"],
-                open=bar["open"],
-                high=bar["high"],
-                low=bar["low"],
-                close=bar["close"],
-                adj_close=bar["adj_close"],
-                volume=bar["volume"],
-            )
-        )
-    # the worker session runs with autoflush off, so without this the reads that
-    # follow in the same job would not see the bars just fetched
-    db.flush()
+    keys = ("date", "open", "high", "low", "close", "adj_close", "volume")
+    # executes immediately, so reads later in the same job (autoflush is off in
+    # the worker) see the new bars. a concurrent job storing the same ticker is
+    # not an error.
+    insert_ignore(db, Price, [{"ticker": ticker, **{k: bar[k] for k in keys}} for bar in bars])
 
 
 def earliest_stored_date(db: Session, ticker: str) -> date | None:
@@ -37,11 +27,9 @@ def earliest_stored_date(db: Session, ticker: str) -> date | None:
 
 
 def _mark_backfilled(db: Session, ticker: str, start: date) -> None:
-    meta = db.get(TickerMeta, ticker)
-    if meta is None:
-        db.add(TickerMeta(ticker=ticker, backfilled_from=start))
-    else:
-        meta.backfilled_from = start
+    db.flush()
+    insert_ignore(db, TickerMeta, [{"ticker": ticker, "backfilled_from": start}])
+    db.execute(update(TickerMeta).where(TickerMeta.ticker == ticker).values(backfilled_from=start))
 
 
 def refresh_history(db: Session, ticker: str) -> int:

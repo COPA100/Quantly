@@ -6,9 +6,10 @@ import zipfile
 from datetime import UTC, date, datetime, timedelta
 
 import requests
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
+from common.db import insert_ignore
 from common.models import FactorFetch, FactorReturn
 
 logger = logging.getLogger(__name__)
@@ -131,18 +132,18 @@ def ensure_factors(db: Session, now: datetime | None = None) -> None:
     try:
         rows = fetch_factors()
         last = latest_factor_date(db)
-        # insert only days we do not have yet
-        for row in rows:
-            if last is None or row["date"] > last:
-                db.add(FactorReturn(**row))
+        # insert only days we do not have yet. another worker may be refreshing
+        # at the same moment, so duplicates are skipped rather than fatal.
+        insert_ignore(db, FactorReturn, [r for r in rows if last is None or r["date"] > last])
         ok = bool(rows)
     except Exception:
         logger.warning("factor refresh failed, keeping stored data", exc_info=True)
         ok = False
 
-    if state is None:
-        db.add(FactorFetch(source=SOURCE, attempted_at=now, succeeded=ok))
-    else:
-        state.attempted_at = now
-        state.succeeded = ok
+    insert_ignore(db, FactorFetch, [{"source": SOURCE, "attempted_at": now, "succeeded": ok}])
+    db.execute(
+        update(FactorFetch)
+        .where(FactorFetch.source == SOURCE)
+        .values(attempted_at=now, succeeded=ok)
+    )
     db.flush()
