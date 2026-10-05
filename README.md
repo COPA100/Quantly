@@ -26,6 +26,20 @@ The correlation heatmap answers "am I actually diversified?" at a glance:
 
 ![Correlation matrix heatmap across the 13 holdings](./docs/screenshots/correlation.png)
 
+How the same portfolio would have done in past crises, replayed on real prices back to 2007:
+
+![Stress tests: portfolio vs S&P 500 in six crises from 2008 to 2022](./docs/screenshots/stress.png)
+
+Four ways to estimate value at risk, and a two-year backtest of whether the forecast held up:
+
+![VaR method comparison table and backtest chart with breaches marked](./docs/screenshots/var-backtest.png)
+
+Where the portfolio sits against the best mix of its own holdings, and what drives its returns:
+
+![Efficient frontier with the current portfolio and min-variance, max-Sharpe and risk-parity alternatives](./docs/screenshots/frontier.png)
+
+![Fama-French five factor plus momentum loadings with confidence intervals](./docs/screenshots/factors.png)
+
 ## What it does
 
 Beyond current value and gain/loss, Quantly surfaces risk and diversification insights. Each one is paired with a plain-English interpretation, not just a number:
@@ -110,6 +124,24 @@ Every C++ kernel has a pure-Python and a NumPy-vectorized baseline, timed across
 The honest reading: C++ wins big on the path-dependent scan NumPy cannot vectorize. Monte Carlo VaR is a tie with NumPy on one thread, because NumPy's batched normal draws are as fast per variate as a hand-written loop; the C++ win is that paths are split into fixed blocks, each with its own counter-based Philox stream, so every core helps (about 7x on 22 threads for a million paths) and the answer is bit-identical whatever the thread count. A Sobol quasi-Monte Carlo variant reaches the same VaR error with roughly 10x fewer paths on the 21-day problem (convergence table in [`benchmarks/results.md`](./benchmarks/results.md)). Correlation still loses to multithreaded BLAS: the new tiled, threaded kernel with a runtime-dispatched AVX2 micro-kernel is 2x to 12x faster than the old naive loop and about 0.3x to 0.6x of NumPy on one thread, roughly even at 500 assets on all threads. Against pure Python the engine is 20x to 560x faster everywhere. That is why only the path-dependent metrics are routed to the engine, and why the worker falls back to NumPy without losing much when the engine isn't installed.
 
 Numbers are from one machine: Intel Core Ultra 9 185H (22 logical CPUs, 22 engine threads), Windows 11, MinGW GCC, Python 3.14.0, NumPy 2.3.4. Timings are medians of repeated runs, and that machine is shared, so run-to-run drift of 10% or more is normal. The ratios are the point, not the absolute times. CI runs `benchmarks/run_benchmarks.py --quick --json` three times and fails if any single-thread C++/NumPy ratio drops more than 15% below [`benchmarks/baseline.json`](./benchmarks/baseline.json).
+
+## Results
+
+Measured locally on the compose stack (Intel Core Ultra 9 185H, pinned container limits; details and method in [docs/capacity.md](./docs/capacity.md)):
+
+| What | Result |
+|---|---|
+| Upload latency, one api process on 1 CPU, 20 uploads/s plus reads | p99 51 ms, 0 errors |
+| Api saturation point | about 100 requests/s, then 503 load shedding instead of 500s |
+| Analysis throughput, prices stored | 2.1 portfolios/s on one worker (2 CPUs), 6.2/s on four |
+| Cold start (empty price table) | about 3x slower per job, bounded by price ingestion |
+| Chaos: 60 uploads, 6 worker kills or restarts mid-run | 60/60 complete, 5 jobs recovered on a second attempt, 0 duplicate or partial results |
+| End-to-end (Playwright, real stack) | register, upload, live status, all sections render |
+| Drawdown kernel, C++ vs NumPy | 43x faster |
+| Monte Carlo VaR, C++ vs NumPy | 5.7x faster on 22 threads, tie on one |
+| Backend tests | 347 tests including Hypothesis properties, golden snapshot, empyrical cross-checks |
+
+Running the real stack under load found five bugs the unit tests could not, from a missing flush to a connection pool smaller than the api's thread pool. They are written up in [docs/design.md](./docs/design.md#what-running-it-under-load-found), along with the rest of the design.
 
 ## Tech stack
 
@@ -232,9 +264,9 @@ The dashboard shows request rate, p50/p95/p99 latency, 5xx ratio, job duration, 
 SCENARIO=burst WORKERS=2 BOOK=cold make loadtest   # needs docker, k6 runs from its image
 ```
 
-`loadtest/capacity.py` turns the burst results into per-worker throughput and a worker count (Little's law), and `loadtest/simulate_scaling.py` replays a queue depth series through the autoscaling policy. The model is in [`docs/capacity.md`](./docs/capacity.md). That file has no measured numbers yet; the tables are empty until the tests have been run.
+`loadtest/capacity.py` turns the burst results into per-worker throughput and a worker count (Little's law), and `loadtest/simulate_scaling.py` replays a queue depth series through the autoscaling policy. The model and every measured number are in [`docs/capacity.md`](./docs/capacity.md).
 
-In AWS, workers scale on backlog per worker (queue depth divided by running workers), published by a small Lambda, and the api scales on request count and CPU. See `infra/README.md`. It has not been through `terraform validate` or `plan` yet.
+In AWS, workers scale on backlog per worker (queue depth divided by running workers), published by a small Lambda, and the api scales on request count and CPU. See `infra/README.md`. The configuration passes `terraform fmt` and `validate`; it has not been applied.
 
 ## Running a demo on AWS
 
@@ -291,9 +323,9 @@ Commands run from `infra/`. [infra/README.md](./infra/README.md) has the detail 
 
 ## Status
 
-The full path works end to end: auth, upload, async analysis, the insight layer, and the frontend. The infrastructure and deploy pipeline are written and validated, and are stood up on demand rather than left running.
+The full path works end to end: auth, upload, async analysis, the insight layer, and the frontend. The Terraform passes `fmt` and `validate`, and the stack is stood up on demand rather than left running. The autoscaling and observability additions have not been applied to AWS yet.
 
-Reliability work (outbox, locks, retries, rate limits) is covered by unit tests with fakeredis. To exercise it against real containers, bring up the compose stack, run migrations and the api, then run `python -m scripts.chaos --count 20 --kills 4` from `backend/`. It uploads portfolios, kills or restarts the worker at random while they process, and checks that every portfolio ends terminal with exactly one set of analytics rows. The same run is the manual and nightly `chaos` workflow. No results are published here yet.
+Reliability work (outbox, locks, retries, rate limits) is covered by unit tests with fakeredis and by a chaos run against real containers: `python -m scripts.chaos --count 60 --kills 6` from `backend/` uploads unique portfolios, kills or restarts the worker at random while they process, and checks that every portfolio ends terminal with exactly one set of analytics rows. It is also the manual and nightly `chaos` workflow.
 
 Known gaps:
 
