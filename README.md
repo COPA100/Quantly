@@ -5,7 +5,7 @@
 
 Upload a brokerage export and see how risky your portfolio really is: how far it could fall, whether the return is worth the risk, how it would have done in 2008, and what is actually driving it.
 
-![Demo: signing in and moving through the overview, risk, stress test, optimization, factor and holdings tabs](./docs/screenshots/demo.gif)
+![Demo: signing in and moving through the overview, risk, stress test, optimization, factor and holdings tabs](./docs/media/demo.gif)
 
 ## Highlights
 
@@ -19,21 +19,21 @@ Upload a brokerage export and see how risky your portfolio really is: how far it
 
 Each portfolio opens on its key figures and an overview, with each deeper analysis on its own tab.
 
-![Portfolio overview: key figures, the analysis pipeline, value over time and allocation](./docs/screenshots/overview.png)
+![Portfolio overview: key figures, the analysis pipeline, value over time and allocation](./docs/media/overview.png)
 
 How the same portfolio would have done in past crises. Pick a scenario to see every holding's loss:
 
-![Stress tests: portfolio vs S&P 500 in six crises, with a per-holding breakdown of the selected one](./docs/screenshots/stress.png)
+![Stress tests: portfolio vs S&P 500 in six crises, with a per-holding breakdown of the selected one](./docs/media/stress.png)
 
 Four ways to estimate value at risk, and a backtest of whether the forecast held up:
 
-<p align="center"><img src="./docs/screenshots/var-backtest.png" width="640" alt="VaR method comparison table and backtest chart with breaches marked"></p>
+<p align="center"><img src="./docs/media/var-backtest.png" width="640" alt="VaR method comparison table and backtest chart with breaches marked"></p>
 
 Where the portfolio sits against the best mix of its own holdings, and what drives its returns:
 
-![Efficient frontier next to the weights of each alternative portfolio](./docs/screenshots/frontier.png)
+![Efficient frontier next to the weights of each alternative portfolio](./docs/media/frontier.png)
 
-![Fama-French five factor plus momentum loadings with confidence intervals](./docs/screenshots/factors.png)
+![Fama-French five factor plus momentum loadings with confidence intervals](./docs/media/factors.png)
 
 ## Results
 
