@@ -4,7 +4,7 @@ How many workers a given upload rate needs, and what the autoscaler should hold 
 
 ## Status of the numbers
 
-**This document has no measured results yet.** The load tests (`loadtest/`, `make loadtest`) need Docker, and Docker was not available on the machine this was written on, so nothing was run. Every table below is empty and marked. Fill them by running the tests and `loadtest/capacity.py`, and record the hardware next to them. No figure here is an estimate or a guess.
+Measured on 2026-10-05 with the k6 scenarios in `loadtest/` against the pinned compose stack, using the mock market data source. Hardware and limits are listed with the results. Everything below was run, nothing is estimated.
 
 ## Model
 
@@ -23,29 +23,50 @@ A worker consuming a queue is either busy or waiting for work. Its CPU says whet
 
 ## Measured results
 
-Hardware: _not recorded, run `make loadtest` and fill in cpu model, cores, ram, docker engine._
+Hardware: Intel Core Ultra 9 185H laptop (22 logical CPUs, 32 GB RAM), Docker Desktop 29.6 on WSL2 (22 CPUs, 15.4 GB to Docker). Container limits from `loadtest/docker-compose.loadtest.yml`: api 1 CPU / 1 GB (uvicorn, one process), each worker 2 CPUs / 2 GB with Celery concurrency 2, postgres 2 CPUs / 2 GB, redis 1 CPU / 512 MB. Market data from the mock source, so no network time is included.
 
-Per-worker throughput (burst scenario, `capacity.py` output):
-
-| book | workers | jobs | drain (s) | jobs/s/worker | service time (s) | mean latency (s) |
-|---|---|---|---|---|---|---|
-| warm | | | | run `make loadtest` to fill in | | |
-| cold | | | | run `make loadtest` to fill in | | |
-
-Workers needed (Little's law, utilization target 70%):
-
-| target uploads/s | book | workers needed | backlog per worker target (30 s wait budget) |
-|---|---|---|---|
-| | warm | run `make loadtest` to fill in | |
-| | cold | run `make loadtest` to fill in | |
-
-Single-node limits (steady and ramp scenarios):
+### Single api node (steady and ramp)
 
 | measure | value |
 |---|---|
-| upload p50 / p95 / p99 at steady rate | run `make loadtest` to fill in |
-| highest upload rate before p99 > 300 ms or errors > 0.1% (ramp) | run `make loadtest` to fill in |
-| bottleneck at that rate (api cpu, postgres, redis, worker) | run `make loadtest` to fill in |
+| steady 5 uploads/s + 20 reads/s, 2 min | upload p50 / p95 / p99 34 / 87 / 113 ms, 0 errors |
+| steady 10 uploads/s + 40 reads/s, 1 min | upload p99 55 ms, 0 errors |
+| steady 20 uploads/s + 80 reads/s, 1 min | upload p99 51 ms, 0 errors, 93.6 req/s served |
+| steady 30 uploads/s + 120 reads/s, 1 min | throughput capped at 97 req/s, 2.1% errors, SLO broken |
+| ramp to the first SLO break | about 100 req/s (20 uploads/s with reads) |
+| bottleneck | api CPU (one uvicorn process on 1 CPU). Postgres stayed near 20% CPU |
+
+Past the knee, requests queue behind the api's thread pool. When every database connection is taken for longer than the pool timeout, the api now answers 503 with `Retry-After` instead of a 500, so overload reads as overload. In a 200-upload burst from 100 concurrent clients, 24 uploads were shed this way and none failed otherwise.
+
+### Worker throughput (burst of 200 unique books, `BOOK=cold`)
+
+Two cases. A fresh stack has an empty `prices` table, so every job also loads up to 20 years of history for its new tickers. Stored prices is the same burst once those tickers are in the table, which is the steady state for a service whose users mostly hold common tickers.
+
+| case | workers | jobs | drain (s) | jobs/s total | jobs/s/worker | service time (s) |
+|---|---|---|---|---|---|---|
+| fresh stack | 1 | 190 | 293.5 | 0.65 | 0.647 | 1.54 |
+| fresh stack | 2 | 180 | 164.2 | 1.10 | 0.548 | 1.82 |
+| fresh stack | 4 | 176 | 122.0 | 1.44 | 0.361 | 2.77 |
+| stored prices | 1 | 200 | 94.5 | 2.12 | 2.117 | 0.47 |
+| stored prices | 2 | 199 | 51.1 | 3.89 | 1.948 | 0.51 |
+| stored prices | 4 | 200 | 32.3 | 6.19 | 1.550 | 0.65 |
+
+(Jobs under 200 are uploads the api shed with a 503 during the burst; every accepted job completed.)
+
+What this says:
+
+- With prices stored, adding workers scales well: 2 workers give 92% of linear, 4 give 73%. The falloff at 4 is shared contention (postgres, the machine's own cores).
+- On a fresh stack, throughput per worker falls as workers are added. That is the signature of a shared bottleneck: the first job to see a ticker writes about 5,000 price rows into one table, and those writes, not the analysis, dominate. A cold start costs about 3x a warm one.
+- So the cheapest capacity win is not more workers but prefetching history for common tickers ahead of time (a nightly job), which turns most cold jobs into stored-price jobs.
+
+### Workers needed (Little's law, 70% utilization, 30 s wait budget)
+
+| target uploads/s | case | workers needed | backlog per worker target |
+|---|---|---|---|
+| 5 | fresh stack (worst case) | 14 | 15.6 |
+| 5 | stored prices | 4 | 56.1 |
+
+The stored-prices numbers are the ones to size from once the price table is warm; the fresh-stack row is the bound for a cold start. These are laptop containers, not Fargate vCPUs, so re-measure on the real task size before trusting the counts in AWS.
 
 ## Using the numbers
 
