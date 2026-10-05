@@ -34,23 +34,43 @@ def ledoit_wolf_cov(x: np.ndarray) -> tuple[np.ndarray, float]:
     return shrink * mu * np.eye(n) + (1 - shrink) * s, shrink
 
 
-def shrunk_mean_returns(x: np.ndarray) -> np.ndarray:
-    """sample mean returns pulled toward the cross-sectional mean, James-Stein style.
+def capm_prior(x: np.ndarray, market: np.ndarray) -> np.ndarray:
+    """equilibrium expected returns: each asset's beta to the market times the
+    market's mean return (rf = 0, matching the sharpe convention here).
+
+    one noisy number (the market mean) instead of n of them, and it keeps the
+    cross-section: a high-beta asset is expected to earn more than a low-beta one.
+    """
+    var = float(np.var(market, ddof=1))
+    if var <= 0:
+        return np.full(x.shape[1], float(np.mean(x)))
+    centered = market - market.mean()
+    betas = (x - x.mean(axis=0)).T @ centered / (len(market) - 1) / var
+    return betas * float(market.mean())
+
+
+def shrunk_mean_returns(x: np.ndarray, prior: np.ndarray | None = None) -> np.ndarray:
+    """sample mean returns pulled toward a prior, James-Stein style.
 
     sample means over a few years are mostly noise, and an optimizer loads up on
-    whichever asset got lucky. shrinking each mean toward the group mean cuts
-    that estimation error. the factor is 1 - (n-3)*s2/sum((m-grand)^2) floored
-    at 0, with s2 the average variance of a sample mean. n <= 3 gets no shrink.
+    whichever asset got lucky. shrinking toward a prior cuts that estimation
+    error. the factor is 1 - (n-3)*s2/sum((m-prior)^2) floored at 0, with s2 the
+    average variance of a sample mean. n <= 3 gets no shrink.
+
+    the default prior is the cross-sectional mean. that collapses every asset to
+    the same expected return when the means are indistinguishable from noise
+    (common with five years of data), which flattens the frontier to one point,
+    so the analyzer passes the capm prior instead.
     """
     t, n = x.shape
     m = x.mean(axis=0)
-    grand = m.mean()
-    spread = float(np.sum((m - grand) ** 2))
+    target = np.full(n, m.mean()) if prior is None else np.asarray(prior, dtype=float)
+    spread = float(np.sum((m - target) ** 2))
     if n <= 3 or spread == 0:
         return m
     s2 = float(np.mean(x.var(axis=0, ddof=1))) / t
     keep = max(0.0, 1.0 - (n - 3) * s2 / spread)
-    return grand + keep * (m - grand)
+    return target + keep * (m - target)
 
 
 def weight_cap(n: int) -> float:

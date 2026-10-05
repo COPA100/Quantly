@@ -202,3 +202,54 @@ def test_registered_and_runs_through_registry():
     assert frontier in REGISTRY
     results = run_analyzers(_ctx(_returns(3)), [frontier])
     assert len(results["frontier"]["points"]) == 30
+
+
+def test_capm_prior_is_beta_times_market_mean():
+    rng = np.random.default_rng(3)
+    market = rng.normal(0.0005, 0.01, 2000)
+    noise = rng.normal(0, 0.002, (2000, 2))
+    x = np.column_stack([0.5 * market, 1.5 * market]) + noise
+    prior = optimize.capm_prior(x, market)
+    np.testing.assert_allclose(prior, [0.5 * market.mean(), 1.5 * market.mean()], rtol=0.05)
+
+
+def test_full_shrinkage_lands_on_the_prior_not_a_flat_line():
+    # means that are pure noise shrink all the way; with a capm prior the result
+    # still separates high and low beta assets
+    rng = np.random.default_rng(4)
+    market = rng.normal(0.0004, 0.01, 1260)
+    betas = np.array([0.4, 0.8, 1.0, 1.2, 1.6])
+    x = market[:, None] * betas + rng.normal(0, 0.012, (1260, 5))
+    prior = optimize.capm_prior(x, market)
+    flat = optimize.shrunk_mean_returns(x)
+    toward_prior = optimize.shrunk_mean_returns(x, prior)
+    assert np.ptp(flat) < 1e-12
+    assert np.all(np.diff(toward_prior) > 0)
+
+
+def test_frontier_spans_a_range_of_returns_with_a_benchmark():
+    rng = np.random.default_rng(5)
+    days = pd.bdate_range("2021-01-04", periods=1260).date
+    market = pd.Series(rng.normal(0.0004, 0.01, 1260), index=days)
+    betas = {"A": 0.4, "B": 0.7, "C": 1.0, "D": 1.2, "E": 1.4, "F": 1.6}
+    returns = pd.DataFrame(
+        {t: market * b + rng.normal(0, 0.012, 1260) for t, b in betas.items()}, index=days
+    )
+    weights = pd.Series(1 / len(betas), index=list(betas))
+    ctx = AnalysisContext(
+        as_of=days[-1],
+        positions=[],
+        total=1.0,
+        weights=weights,
+        prices=pd.DataFrame(),
+        returns=returns,
+        portfolio_returns=returns.mean(axis=1),
+        benchmark_returns=market,
+        history={},
+        full_history={},
+        benchmark_ticker="SPY",
+    )
+    out = frontier.fn(ctx)["frontier"]
+    rets = [p["ret"] for p in out["points"]]
+    assert max(rets) - min(rets) > 0.01
+    assert out["max_sharpe"]["weights"] != out["min_variance"]["weights"]

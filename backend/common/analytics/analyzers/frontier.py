@@ -69,7 +69,14 @@ def frontier(ctx: AnalysisContext) -> dict[str, Any]:
     x = returns.to_numpy()
     daily_cov, _ = optimize.ledoit_wolf_cov(x)
     cov = daily_cov * TRADING_DAYS
-    mu = optimize.shrunk_mean_returns(x) * TRADING_DAYS
+    # shrink toward capm-implied returns when the benchmark is there, so a fully
+    # shrunk estimate still ranks assets by market exposure
+    market = ctx.benchmark_returns.reindex(returns.index).dropna()
+    if len(market) == len(returns):
+        prior = optimize.capm_prior(x, market.to_numpy())
+    else:
+        prior = None
+    mu = optimize.shrunk_mean_returns(x, prior) * TRADING_DAYS
     cap = optimize.weight_cap(len(tickers))
 
     held = ctx.weights.reindex(tickers).fillna(0.0).to_numpy()
