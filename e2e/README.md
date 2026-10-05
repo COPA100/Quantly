@@ -18,7 +18,7 @@ docker compose up -d postgres redis s3
 cd backend
 alembic upgrade head
 PYTHONPATH=. python ../e2e/seed_market.py
-docker compose up -d --build worker     # from the repo root
+docker compose up -d --build worker beat   # from the repo root
 uvicorn api.main:app --port 8000        # leave running
 
 cd e2e
