@@ -98,7 +98,10 @@ def stress(ctx: AnalysisContext) -> dict[str, Any]:
             else:
                 # no usable return series either means beta 1.0, flagged
                 beta = betas.get(ticker, 1.0)
-                row.update(**{"return": beta * bench_ret}, method="proxied", beta=beta)
+                # a high beta times a deep crash can pass -100%, which no long
+                # position can lose, so the estimate stops at a total loss
+                proxied = max(beta * bench_ret, -1.0)
+                row.update(**{"return": proxied}, method="proxied", beta=beta)
                 if ticker not in betas:
                     row["no_history"] = True
             rows.append(row)

@@ -110,3 +110,13 @@ def test_scenario_constants_and_registration():
     names = [a.name for a in REGISTRY]
     assert names.index("stress") > names.index("insights")
     assert REGISTRY[names.index("stress")].keys == ("stress",)
+
+
+def test_a_beta_estimate_never_loses_more_than_everything():
+    # beta 3 times a 50% crash would be -150%; a long position bottoms at -100%
+    returns, bench = _beta_inputs({"HOT": 3.0})
+    out = stress.fn(_ctx({"HOT": 1.0}, {"SPY": _path(100, 50)}, returns, bench))
+    (h,) = _covid(out)["holdings"]
+    assert h["method"] == "proxied"
+    assert h["return"] == pytest.approx(-1.0)
+    assert _covid(out)["portfolio_return"] == pytest.approx(-1.0)
