@@ -5,6 +5,8 @@ from common.telemetry import connect_celery_signals
 
 settings = get_settings()
 
+HOUSEKEEPING_QUEUE = "housekeeping"
+
 # the tasks module is imported lazily by the worker via `include`, so the api can
 # import this app to enqueue by name without pulling in pandas/yfinance.
 celery_app = Celery(
@@ -28,15 +30,24 @@ celery_app.conf.update(
     # an unacked task goes back on the queue after this long, which is how a
     # killed worker's task is redelivered
     broker_transport_options={"visibility_timeout": settings.broker_visibility_timeout_seconds},
-    # run by the `beat` service, one instance only
+    # housekeeping gets its own queue, so a backlog of analysis jobs cannot delay
+    # the relay that publishes new uploads. workers consume both queues.
+    task_routes={
+        "relay_outbox": {"queue": HOUSEKEEPING_QUEUE},
+        "sweep_stuck_portfolios": {"queue": HOUSEKEEPING_QUEUE},
+    },
+    # run by the `beat` service, one instance only. a tick that is not picked up
+    # before the next one is due is dropped, each run catches up on its own.
     beat_schedule={
         "relay-outbox": {
             "task": "relay_outbox",
             "schedule": settings.outbox_relay_interval_seconds,
+            "options": {"expires": settings.outbox_relay_interval_seconds * 5},
         },
         "sweep-stuck-portfolios": {
             "task": "sweep_stuck_portfolios",
             "schedule": settings.sweeper_interval_seconds,
+            "options": {"expires": settings.sweeper_interval_seconds},
         },
     },
 )

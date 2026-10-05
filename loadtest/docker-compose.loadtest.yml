@@ -86,6 +86,8 @@ services:
       - worker
       - --loglevel=warning
       - --concurrency=${WORKER_CONCURRENCY:-2}
+      - -Q
+      - celery,housekeeping
     deploy:
       resources:
         limits:

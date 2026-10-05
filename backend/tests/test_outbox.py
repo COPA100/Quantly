@@ -180,3 +180,15 @@ def test_dlq_requeue_resets_state_and_announces_again(db, fake_redis):
     assert len(unpublished) == 1
     assert unpublished[0].payload["task_id"] == job.celery_task_id
     assert fake_redis.llen(tasks.DLQ_KEY) == 0
+
+
+def test_housekeeping_runs_on_its_own_queue_and_ticks_expire():
+    # a backlog of analysis jobs must not delay the relay that publishes uploads,
+    # and missed ticks must not pile up behind it
+    from worker.celery_app import HOUSEKEEPING_QUEUE, celery_app
+
+    routes = celery_app.conf.task_routes
+    assert routes["relay_outbox"]["queue"] == HOUSEKEEPING_QUEUE
+    assert routes["sweep_stuck_portfolios"]["queue"] == HOUSEKEEPING_QUEUE
+    for entry in celery_app.conf.beat_schedule.values():
+        assert entry["options"]["expires"] > 0

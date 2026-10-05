@@ -35,4 +35,5 @@ COPY . .
 RUN useradd --create-home appuser && chown -R appuser /app
 USER appuser
 
-CMD ["celery", "-A", "worker.celery_app", "worker", "--loglevel=info", "--concurrency=2"]
+# analysis jobs plus the housekeeping queue (outbox relay, sweeper)
+CMD ["celery", "-A", "worker.celery_app", "worker", "--loglevel=info", "--concurrency=2", "-Q", "celery,housekeeping"]
