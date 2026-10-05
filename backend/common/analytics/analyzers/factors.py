@@ -58,8 +58,11 @@ def _factor_frame(ctx: AnalysisContext) -> pd.DataFrame:
         .where(FactorReturn.date >= first, FactorReturn.date <= last)
         .order_by(FactorReturn.date)
     ).all()
+    columns = ["date", "rf", *FACTORS]
+    # explicit columns, so no stored factor data gives an empty frame, not a crash
     return pd.DataFrame(
-        [{"date": r.date, "rf": r.rf, **{f: getattr(r, f) for f in FACTORS}} for r in rows]
+        [{"date": r.date, "rf": r.rf, **{f: getattr(r, f) for f in FACTORS}} for r in rows],
+        columns=columns,
     ).set_index("date")
 
 

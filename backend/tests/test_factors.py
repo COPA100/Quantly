@@ -213,6 +213,15 @@ def test_unavailable_without_db():
     assert out["reason"]
 
 
+def test_unavailable_when_no_factor_data_is_stored(db_session, monkeypatch):
+    # first run with the download down: nothing stored yet, the section just hides
+    monkeypatch.setattr(fa, "ensure_factors", lambda db: None)
+    days = [date(2024, 1, 1) + timedelta(days=i) for i in range(100)]
+    out = fa.factors.fn(make_ctx(db_session, pd.Series(0.001, index=days)))["factors"]
+    assert out["available"] is False
+    assert "0 days" in out["reason"]
+
+
 def test_unavailable_with_too_few_overlapping_days(db_session, monkeypatch):
     monkeypatch.setattr(fa, "ensure_factors", lambda db: None)
     days = [date(2024, 1, 1) + timedelta(days=i) for i in range(10)]
