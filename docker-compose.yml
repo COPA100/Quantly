@@ -70,7 +70,8 @@ services:
       # prefork children write metrics here, the parent serves them on :9100
       PROMETHEUS_MULTIPROC_DIR: /tmp/prom
     tmpfs:
-      - /tmp/prom
+      # world-writable: the worker runs as a non-root user
+      - /tmp/prom:mode=1777
     ports:
       - "9100:9100"
 
