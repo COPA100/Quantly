@@ -131,3 +131,26 @@ def test_backfill_marks_young_ticker_done_even_without_older_bars(db_session, mo
 def test_backfill_skips_ticker_with_no_data(db_session, monkeypatch):
     monkeypatch.setattr(history, "fetch_history", lambda *a, **k: pytest.fail("no fetch"))
     assert history.backfill_history(db_session, "BADX") == 0
+
+
+def test_new_bars_are_visible_in_the_same_session_without_autoflush(db_engine, monkeypatch):
+    # the worker's SessionLocal has autoflush off. a first fetch must still be
+    # returned by the read that follows it, or the first analysis of a new
+    # ticker silently runs without its history.
+    from sqlalchemy.orm import sessionmaker
+
+    connection = db_engine.connect()
+    transaction = connection.begin()
+    db = sessionmaker(bind=connection, autoflush=False)()
+    try:
+        monkeypatch.setattr(
+            history,
+            "fetch_history",
+            lambda t, start=None, end=None: [bar(date(2026, 7, 20)), bar(date(2026, 7, 21))],
+        )
+        rows = history.ensure_history(db, "NEWT", as_of=date(2026, 7, 21))
+        assert [r.date for r in rows] == [date(2026, 7, 20), date(2026, 7, 21)]
+    finally:
+        db.close()
+        transaction.rollback()
+        connection.close()

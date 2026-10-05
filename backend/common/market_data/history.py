@@ -27,6 +27,9 @@ def store_bars(db: Session, ticker: str, bars: list[dict]) -> None:
                 volume=bar["volume"],
             )
         )
+    # the worker session runs with autoflush off, so without this the reads that
+    # follow in the same job would not see the bars just fetched
+    db.flush()
 
 
 def earliest_stored_date(db: Session, ticker: str) -> date | None:
