@@ -1,4 +1,4 @@
-﻿import { formatPercent } from '../lib/format'
+import { formatPercent } from '../lib/format'
 import { MARKERS, type FrontierMarker, type FrontierResult } from '../lib/frontier'
 
 const W = 640
@@ -22,6 +22,12 @@ function Shape({ shape, x, y, color }: { shape: FrontierMarker['shape']; x: numb
 
 function ticks(lo: number, hi: number): number[] {
   return Array.from({ length: TICKS }, (_, i) => lo + ((hi - lo) * i) / (TICKS - 1))
+}
+
+// enough decimals that neighbouring ticks never print the same label
+function tickDigits(lo: number, hi: number): number {
+  const step = ((hi - lo) / (TICKS - 1)) * 100
+  return step >= 1 ? 0 : step >= 0.1 ? 1 : 2
 }
 
 export default function FrontierChart({ frontier }: { frontier: FrontierResult }) {
@@ -52,13 +58,13 @@ export default function FrontierChart({ frontier }: { frontier: FrontierResult }
           <g key={`y${t}`}>
             <line x1={M.left} x2={W - M.right} y1={sy(t)} y2={sy(t)} stroke="#e2e8f0" />
             <text x={M.left - 8} y={sy(t)} textAnchor="end" dominantBaseline="middle" className="fill-slate-500 text-[11px]">
-              {formatPercent(t, 0)}
+              {formatPercent(t, tickDigits(y0, y1))}
             </text>
           </g>
         ))}
         {ticks(x0, x1).map((t) => (
           <text key={`x${t}`} x={sx(t)} y={H - M.bottom + 18} textAnchor="middle" className="fill-slate-500 text-[11px]">
-            {formatPercent(t, 0)}
+            {formatPercent(t, tickDigits(x0, x1))}
           </text>
         ))}
         <text x={(M.left + W - M.right) / 2} y={H - 8} textAnchor="middle" className="fill-slate-600 text-xs">
