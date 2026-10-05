@@ -1,4 +1,4 @@
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Button from '../components/Button'
@@ -12,11 +12,16 @@ const SAMPLE = `"Symbol","Qty (Quantity)","Cost Basis"
 
 export default function UploadPage() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [file, setFile] = useState<File | null>(null)
 
   const mutation = useMutation({
     mutationFn: (selected: File) => uploadPortfolio(selected),
-    onSuccess: (accepted) => navigate(`/portfolios/${accepted.id}`),
+    onSuccess: (accepted) => {
+      // the new portfolio shows up in the sidebar straight away
+      void queryClient.invalidateQueries({ queryKey: ['portfolios'] })
+      navigate(`/portfolios/${accepted.id}`)
+    },
   })
 
   return (

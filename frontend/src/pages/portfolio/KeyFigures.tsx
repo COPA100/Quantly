@@ -15,7 +15,7 @@ function figures(a: Analytics): Figure[] {
   if (a.gain_loss) {
     const { gain_loss, gain_loss_pct } = a.gain_loss
     out.push({
-      label: 'Gain since purchase',
+      label: 'Total gain',
       value: formatSigned(formatCurrencyShort(gain_loss), gain_loss),
       sub: formatSigned(`${gain_loss_pct.toFixed(1)}%`, gain_loss_pct),
       tone: toneOf(gain_loss),

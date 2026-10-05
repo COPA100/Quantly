@@ -32,6 +32,8 @@ export function usePortfolioStatus(id: number) {
           finished = true
           void queryClient.invalidateQueries({ queryKey: ['portfolio', id] })
           void queryClient.invalidateQueries({ queryKey: ['analytics', id] })
+          // the sidebar list shows each portfolio's status
+          void queryClient.invalidateQueries({ queryKey: ['portfolios'] })
         }
       },
       controller.signal,

@@ -49,10 +49,10 @@ export default function PortfolioLayout() {
 
   return (
     <div>
-      <Link to="/" className="text-sm text-muted transition-colors hover:text-ink">
+      <Link to="/" className="text-sm text-muted transition-colors hover:text-ink lg:hidden">
         Portfolios
       </Link>
-      <div className="mt-3 flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
+      <div className="mt-3 flex flex-wrap items-end justify-between gap-x-8 gap-y-4 lg:mt-0">
         <div className="min-w-0">
           <h1 className="display-xl truncate text-ink">{displayName(detail.original_filename)}</h1>
           <p className="mt-2 text-sm text-muted">
